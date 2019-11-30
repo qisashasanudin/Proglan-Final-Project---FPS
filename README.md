@@ -1,2 +1,4 @@
-# Proglan_FinalProject_FPS
-Simple First Person Shooter
+# Simple First Person Shooter
+by:
+Qisas Tazkia Hasanudin
+Edwiansyah Zaky Ashadi
