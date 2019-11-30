@@ -30,9 +30,10 @@ const char right = 'd';
 const char right_caps = 'D';
 const char crouch = 'c';
 const char crouch_caps = 'C';
-const char jump = SPACEBAR;
-const int sprint = 0;
-const int spectator = 0;
+const int jump = SPACEBAR;
+int sprint = 0;
+int spectator = 0;
+int pause = 0;
 // angle of rotation for the camera direction
 const int xOrigin = 683;
 const int yOrigin = 384;
@@ -40,10 +41,14 @@ float angle_x = 0.0f;
 float angle_y = 0.0f;
 float deltaAngle_x = 0.0f;
 float deltaAngle_y = 0.0f;
+float speed_walk = 0.03f;
+float gravity = 0.02f;
 // current position of the camera
+float height_player = 1.8f;
 float x=0.0f, y=1.8f, z=5.0f;
 // actual vector representing the camera's direction
 float lx=0.0f, ly=0.0f, lz=-1.0f;
+
 
 //===========================================================================================================================
 
@@ -55,7 +60,7 @@ void key_press(unsigned char key, int xx, int yy);
 void key_release(unsigned char key, int x, int y);
 void specKey_press(int key, int xx, int yy);
 void specKey_release(int key, int x, int y);
-void move();
+void key_calc();
 void camera(int x, int y);
 void mouseButton(int button, int state, int x, int y);
 
@@ -64,6 +69,7 @@ void mouseButton(int button, int state, int x, int y);
 int main(int argc, char **argv) {
 
 	// init GLUT and create window
+	printf("initializing");
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowPosition(100,100);
@@ -122,8 +128,9 @@ void toggle_fullscreen() {
 }
 
 void render3D(void) {
-	glutWarpPointer(res_x/2, res_y/2);
-	move();
+	if(!pause){
+		key_calc();
+	}
 	// Clear Color and Depth Buffers
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// Reset transformations
@@ -144,8 +151,8 @@ void render3D(void) {
 
 // Draw 36 SnowMen
 	int i,j;
-	for(i = -3; i < 3; i++)
-		for(j=-3; j < 3; j++) {
+	for(i=-3; i<3; i++)
+		for(j=-3; j<3; j++) {
                      glPushMatrix();
                      glTranslatef(i*10.0,0,j * 10.0);
                      drawSnowMan();
@@ -177,18 +184,14 @@ void drawSnowMan() {
 }
 
 void key_press(unsigned char key, int xx, int yy) {
-	keystates[key] = 1;
-	
-	if(keystates[ESC]){
-		exit(0);
-	}
-	
 	int mod = glutGetModifiers();
 	if (mod == GLUT_ACTIVE_ALT){
 		if (key == ENTER){
 			toggle_fullscreen();
 		}
 	}
+	
+	keystates[key] = 1;
 }
 
 void key_release(unsigned char key, int x, int y){
@@ -209,67 +212,81 @@ void specKey_release(int key, int x, int y) {
     }
 } 
 
-void move(){	
+void key_calc(){
 	if((keystates[forward] || keystates[forward_caps]) && !(keystates[back] || keystates[back_caps])){
-		x += 0.03f * lx;
-		z += 0.03f * lz;
+		x += speed_walk * lx;
+		z += speed_walk * lz;
 		if(spectator == 1){
-			y += 0.03f * ly;
+			y += speed_walk * ly;
 		}
 	}
 	if(!(keystates[forward] || keystates[forward_caps]) && (keystates[back] || keystates[back_caps])){
-		x -= 0.03f * lx;
-		z -= 0.03f * lz;
+		x -= speed_walk * lx;
+		z -= speed_walk * lz;
 		if(spectator == 1){
-			y -= 0.03f * ly;
+			y -= speed_walk * ly;
 		}
 	}
 	if((keystates[left] || keystates[left_caps]) && !(keystates[right] || keystates[right_caps])){
-		x += 0.03f * lz;
-		z -= 0.03f * lx;
+		x += speed_walk * lz;
+		z -= speed_walk * lx;
 	}
 	if(!(keystates[left] || keystates[left_caps]) && (keystates[right] || keystates[right_caps])){
-		x -= 0.03f * lz;
-		z += 0.03f * lx;
+		x -= speed_walk * lz;
+		z += speed_walk * lx;
 	}
 	if(keystates[crouch] || keystates[crouch_caps]){
-		if(y>1.0f){
-			y -= 0.03f/(9.8*9.8/60);
+		if(y>height_player){
+			y -= 0.05f;
 		}
 	}
 	if(keystates[jump]){
 		if(y<3.0f){
-			y += 0.05f;
+			y += gravity;
 		}else if(y>=3.0f){
 			keystates[jump] = 0;
 		}
 	}
-	if(!keystates[jump] && y>1.8f && !spectator){
-		y -= 0.02f;
+	if(!keystates[jump] && y>height_player && !spectator){
+		y -= gravity;
+	}
+	if(keystates[ESC]){
+		switch(pause){
+			case 0:
+				pause = 1;
+				glutSetCursor(GLUT_CURSOR_INHERIT);
+				break;
+			case 1:
+				pause = 0;
+				glutSetCursor(GLUT_CURSOR_NONE);
+				break;
+		}
 	}
 }
 
 void camera(int x, int y) {
-	
-	deltaAngle_x += (x - xOrigin) * 0.001f;
-	deltaAngle_y += (y - yOrigin) * 0.001f;
-	
-	if(deltaAngle_y > 1.0f){
-		deltaAngle_y = 1.0f;
-	}else if(deltaAngle_y < -1.0f){
-		deltaAngle_y = -1.0f;
+	if(!pause){
+		deltaAngle_x += (x - xOrigin) * 0.001f;
+		deltaAngle_y += (y - yOrigin) * 0.001f;
+		
+		if(deltaAngle_y > 1.0f){
+			deltaAngle_y = 1.0f;
+		}else if(deltaAngle_y < -1.0f){
+			deltaAngle_y = -1.0f;
+		}
+		
+		lx = sin(angle_x + deltaAngle_x);
+		ly = -sin(angle_y + deltaAngle_y);
+		lz = -cos(angle_x + deltaAngle_x);
+		
+		glutWarpPointer(res_x/2, res_y/2);
 	}
-	
-	lx = sin(angle_x + deltaAngle_x);
-	ly = -sin(angle_y + deltaAngle_y);
-	lz = -cos(angle_x + deltaAngle_x);
-
 }
 
 void mouseButton(int button, int state, int x, int y) {
 	if (button == GLUT_RIGHT_BUTTON) {
 		if (state != GLUT_UP) {
-
+			
 		}
 		else if (state == GLUT_UP) {
 
