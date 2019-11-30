@@ -1,181 +1,251 @@
 #include <stdio.h>
 #include <windows.h>
+#include <math.h>
 #include <GL/glut.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_timer.h>
 
-
-char image[] = "resources/kucing.jpg";
 char title[] = "Saya sedih sekali";
-float anglePyramid = 0;  // Rotational angle for pyramid [NEW]
-float angleCube = 0;     // Rotational angle for cube [NEW]
-int refreshMills = 1000/60;        // refresh interval in milliseconds [NEW]
-float cx = 0, cy = 0, cz = -7;
+float anglePyramid = 0.0f;  // Rotational angle for pyramid [NEW]
+float angleCube = 0.0f;     // Rotational angle for cube [NEW]
+int refreshRate = 1000/60;        // refresh interval in milliseconds [NEW]
 
 int up = 0;
 int down = 0;
 int left = 0;
 int right = 0;
-float x_vel = 0;
-float y_vel = 0;
 
 // angle of rotation for the camera direction
-float angle=0.0;
+float angle_x=0.0f;
+float angle_y=0.0f;
 // actual vector representing the camera's direction
 float lx=0.0f, ly=0.0f, lz=-1.0f;
-// XZ position of the camera
+// current position of the camera
 float x=0.0f, y=1.0f, z=5.0f;
 
-float deltaAngle = 0.0f;
-float deltaMove = 0;
+float deltaAngle_x = 0.0f;
+float deltaAngle_y = 0.0f;
+float deltaMove_fwd = 0.0f;
+float deltaMove_side = 0.0f;
+
+int xMouseState = -1;
+int yMouseState = -1;
 
 //===========================================================================================================================
 
-void initGL() {
-   glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
-   glClearDepth(1.0f);                   // Set background depth to farthest
-   glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
-   glDepthFunc(GL_LEQUAL);    // Set the type of depth-test
-   glShadeModel(GL_SMOOTH);   // Enable smooth shading
-   glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);  // Nice perspective corrections
-}
-
-void reshape(int w, int h) {
-	if(h == 0)
+void screenResize(int w, int h) {
+	if (h == 0)
 		h = 1;
-	float ratio = 1.0* w / h;
+	float ratio =  w * 1.0 / h;
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glViewport(0, 0, w, h);
-	gluPerspective(45,ratio,1,100);
+	gluPerspective(45.0f, ratio, 0.1f, 100.0f);
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void keyboard_down(unsigned char key, int x, int y)
-{
-	switch(key){
+void drawSnowMan() {
+	glColor3f(1.0f, 1.0f, 1.0f);
+// Draw Body
+	glTranslatef(0.0f ,0.75f, 0.0f);
+	glutSolidSphere(0.75f,20,20);
+// Draw Head
+	glTranslatef(0.0f, 1.0f, 0.0f);
+	glutSolidSphere(0.25f,20,20);
+// Draw Eyes
+	glPushMatrix();
+	glColor3f(0.0f,0.0f,0.0f);
+	glTranslatef(0.05f, 0.10f, 0.18f);
+	glutSolidSphere(0.05f,10,10);
+	glTranslatef(-0.1f, 0.0f, 0.0f);
+	glutSolidSphere(0.05f,10,10);
+	glPopMatrix();
+// Draw Nose
+	glColor3f(1.0f, 0.5f , 0.5f);
+	glRotatef(0.0f,1.0f, 0.0f, 0.0f);
+	glutSolidCone(0.08f,0.5f,10,2);
+}
+
+void walk() {
+	x += deltaMove_fwd * lx * 0.1f;
+	z += deltaMove_fwd * lz * 0.1f;
+}
+
+void strafe() {
+	z += deltaMove_side * lx * 0.1f;
+	x += deltaMove_side * lz * 0.1f;
+}
+
+void renderScene(void) {
+	if (deltaMove_fwd)
+		walk();
+	if (deltaMove_side)
+		strafe();
+	// Clear Color and Depth Buffers
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	// Reset transformations
+	glLoadIdentity();
+	// Set the camera
+	gluLookAt(	x, y, z,
+			x+lx, y+ly, z+lz,
+			0.0f, 1.0f, 0.0f);
+		printf("%f %f %f\n", x, y, z);
+			
+// Draw ground
+	glColor3f(0.0f, 1.0f, 0.0f);
+	glBegin(GL_QUADS);
+		glVertex3f(-100.0f, 0.0f, -100.0f);
+		glVertex3f(-100.0f, 0.0f,  100.0f);
+		glVertex3f( 100.0f, 0.0f,  100.0f);
+		glVertex3f( 100.0f, 0.0f, -100.0f);
+	glEnd();
+
+// Draw 36 SnowMen
+	int i,j;
+	for(i = -3; i < 3; i++)
+		for(j=-3; j < 3; j++) {
+                     glPushMatrix();
+                     glTranslatef(i*10.0,0,j * 10.0);
+                     drawSnowMan();
+                     glPopMatrix();
+               }
+        glutSwapBuffers();
+} 
+
+void key_press(unsigned char key, int xx, int yy) { 	
+    switch(key){
+    	case 27:
+    		exit(0);
+    		break;
 		case 'w':
 			up = 1;
+			deltaMove_fwd = 0.5f;
 			break;
 		case 'a':
 			left = 1;
+			deltaMove_side = 0.5f;
 			break;
 		case 's':
 			down = 1;
+			deltaMove_fwd = -0.5f;
 			break;
 		case 'd':
 			right = 1;
+			deltaMove_side = -0.5f;
 			break;
 	}
 }
 
-void keyboard_up(unsigned char key, int x, int y)
+void key_release(unsigned char key, int x, int y)
 {
 	switch(key){
 		case 'w':
 			up = 0;
+			deltaMove_fwd = 0.0f;
 			break;
 		case 'a':
 			left = 0;
+			deltaMove_side = 0.0f;
 			break;
 		case 's':
 			down = 0;
+			deltaMove_fwd = 0.0f;
 			break;
 		case 'd':
 			right = 0;
+			deltaMove_side = 0.0f;
 			break;
 	}
 }
- 
-void idle(){
-	glutPostRedisplay();
-}
- 
-/* Called back when timer expired [NEW] */
-void timer(int value) {
-   glutTimerFunc(refreshMills, timer, 0); // next timer call milliseconds later
+
+void specKey_press(int key, int xx, int yy) {
+
+       switch (key) {
+             case GLUT_KEY_UP : deltaMove_fwd = 0.5f; break;
+             case GLUT_KEY_DOWN : deltaMove_fwd = -0.5f; break;
+       }
+} 
+
+void specKey_release(int key, int x, int y) { 	
+
+        switch (key) {
+             case GLUT_KEY_UP :
+             case GLUT_KEY_DOWN : deltaMove_fwd = 0.0f;break;
+        }
+} 
+
+void mouseMove(int x, int y) { 	
+    if (xMouseState >= 0) {
+		// update deltaAngle
+		deltaAngle_x = (x - xMouseState) * 0.001f;
+		// update camera's direction
+		lx = sin(angle_x + deltaAngle_x);
+		lz = -cos(angle_x + deltaAngle_x);
+	}
+	if (yMouseState >= 0) {
+		// update deltaAngle
+		deltaAngle_y = (y - yMouseState) * 0.001f;
+		// update camera's direction
+		ly = sin(angle_y + deltaAngle_y);
+	}
 }
 
-void display() {
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear color and depth buffers
-   glMatrixMode(GL_MODELVIEW);     // To operate on model-view matrix
- 
-   // Render a color-cube consisting of 6 quads with different colors
-   glLoadIdentity();                 // Reset the model-view matrix
-   glTranslatef(0, 0, -7.0f);  // Move right and into the screen
-   glRotatef(angleCube, 1, 1, 0);  // Rotate about (1,1,1)-axis [NEW]
-   glRotatef(angleCube, 1, 0, 1);
-   glRotatef(angleCube, 0, 1, 1);
- 
-   glBegin(GL_QUADS);                // Begin drawing the color cube with 6 quads
-      // Top face (y = 1.0f)
-      // Define vertices in counter-clockwise (CCW) order with normal pointing out
-      glColor3f(0.0f, 1.0f, 0.0f);     // Green
-      glVertex3f( 1.0f, 1.0f, -1.0f);
-      glVertex3f(-1.0f, 1.0f, -1.0f);
-      glVertex3f(-1.0f, 1.0f,  1.0f);
-      glVertex3f( 1.0f, 1.0f,  1.0f);
- 
-      // Bottom face (y = -1.0f)
-      glColor3f(1.0f, 0.5f, 0.0f);     // Orange
-      glVertex3f( 1.0f, -1.0f,  1.0f);
-      glVertex3f(-1.0f, -1.0f,  1.0f);
-      glVertex3f(-1.0f, -1.0f, -1.0f);
-      glVertex3f( 1.0f, -1.0f, -1.0f);
- 
-      // Front face  (z = 1.0f)
-      glColor3f(1.0f, 0.0f, 0.0f);     // Red
-      glVertex3f( 1.0f,  1.0f, 1.0f);
-      glVertex3f(-1.0f,  1.0f, 1.0f);
-      glVertex3f(-1.0f, -1.0f, 1.0f);
-      glVertex3f( 1.0f, -1.0f, 1.0f);
- 
-      // Back face (z = -1.0f)
-      glColor3f(1.0f, 1.0f, 0.0f);     // Yellow
-      glVertex3f( 1.0f, -1.0f, -1.0f);
-      glVertex3f(-1.0f, -1.0f, -1.0f);
-      glVertex3f(-1.0f,  1.0f, -1.0f);
-      glVertex3f( 1.0f,  1.0f, -1.0f);
- 
-      // Left face (x = -1.0f)
-      glColor3f(0.0f, 0.0f, 1.0f);     // Blue
-      glVertex3f(-1.0f,  1.0f,  1.0f);
-      glVertex3f(-1.0f,  1.0f, -1.0f);
-      glVertex3f(-1.0f, -1.0f, -1.0f);
-      glVertex3f(-1.0f, -1.0f,  1.0f);
- 
-      // Right face (x = 1.0f)
-      glColor3f(1.0f, 0.0f, 1.0f);     // Magenta
-      glVertex3f(1.0f,  1.0f, -1.0f);
-      glVertex3f(1.0f,  1.0f,  1.0f);
-      glVertex3f(1.0f, -1.0f,  1.0f);
-      glVertex3f(1.0f, -1.0f, -1.0f);
-   glEnd();  // End of drawing color-cube
- 
-   glutSwapBuffers();  // Swap the front and back frame buffers (double buffering)
- 
-   // Update the rotational angle after each refresh [NEW]
-   angleCube -= 0.1;
+void mouseButton(int button, int state, int x, int y) {
+	// only start motion if the left button is pressed
+	if (button == GLUT_LEFT_BUTTON) {
+		if (state != GLUT_UP) {
+			xMouseState = x;
+			yMouseState = y;
+		}
+		else if (state == GLUT_UP) {
+			angle_x += deltaAngle_x;
+			angle_y += deltaAngle_y;
+			
+			if(angle_y > 1.0f){
+				angle_y = 1.0f;
+			}else if(angle_y < -1.0f){
+				angle_y = -1.0f;
+			}
+			
+			xMouseState = -1.0f;
+			yMouseState = -1.0f;
+		}
+	}
 }
 
 //===========================================================================================================================
 
-int main(int argc, char** argv) {
-   glutInit(&argc, argv);            // Initialize GLUT
-   glutInitDisplayMode(GLUT_DOUBLE); // Enable double buffered mode
-   glutInitWindowSize(1280, 720);   // Set the window's initial width & height
-   glutInitWindowPosition(50, 50); // Position the window's initial top-left corner
-   glutCreateWindow(title);          // Create window with the given title
-   glutDisplayFunc(display);       // Register callback handler for window re-paint event
-   glutReshapeFunc(reshape);       // Register callback handler for window re-size event
-   glutKeyboardFunc(keyboard_down);
-   glutKeyboardUpFunc(keyboard_up);
-   glutIdleFunc(idle);
-   initGL();                       // Our own OpenGL initialization
-   glutTimerFunc(0, timer, 0);     // First timer call immediately [NEW]
-   glutMainLoop();                 // Enter the infinite event-processing loop
-	
-   return 0;
+int main(int argc, char **argv) {
+
+	// init GLUT and create window
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
+	glutInitWindowPosition(100,100);
+	glutInitWindowSize(1366,768);
+	glutCreateWindow("Lighthouse3D - GLUT Tutorial");
+
+	// register callbacks
+	glutDisplayFunc(renderScene);
+	glutReshapeFunc(screenResize);
+	glutIdleFunc(renderScene);
+
+	glutIgnoreKeyRepeat(1);
+	glutKeyboardFunc(key_press);
+	glutKeyboardUpFunc(key_release);
+	glutSpecialFunc(specKey_press);
+	glutSpecialUpFunc(specKey_release);
+
+	// here are the two new functions
+	glutMouseFunc(mouseButton);
+	glutMotionFunc(mouseMove);
+
+	// OpenGL init
+	glEnable(GL_DEPTH_TEST);
+
+	// enter GLUT event processing cycle
+	glutMainLoop();
+
+	return 1;
 }
