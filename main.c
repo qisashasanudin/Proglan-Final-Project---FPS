@@ -17,19 +17,25 @@ int res_x = 1366;
 int res_y = 768;
 float fov = 60.0f;
 int is_fullscreen = 0;
-int refreshRate = 1000/60;
-// WASD controls
-int up = 0;
-int down = 0;
-int left = 0;
-int right = 0;
-int jump = 0;
-int crouch = 0;
-int sprint = 0;
-int flying = 0;
+const int refreshRate = 1000/60;
+// controls
+int keystates[256];
+const char forward = 'w';
+const char forward_caps = 'W';
+const char back = 's';
+const char back_caps = 'S';
+const char left = 'a';
+const char left_caps = 'A';
+const char right = 'd';
+const char right_caps = 'D';
+const char crouch = 'c';
+const char crouch_caps = 'C';
+const char jump = SPACEBAR;
+const int sprint = 0;
+const int spectator = 0;
 // angle of rotation for the camera direction
-int xOrigin = 683;
-int yOrigin = 384;
+const int xOrigin = 683;
+const int yOrigin = 384;
 float angle_x = 0.0f;
 float angle_y = 0.0f;
 float deltaAngle_x = 0.0f;
@@ -91,7 +97,6 @@ int main(int argc, char **argv) {
 }
 
 //===========================================================================================================================
-
 
 void screenResize(int w, int h) {
 	if (h == 0)
@@ -172,57 +177,22 @@ void drawSnowMan() {
 }
 
 void key_press(unsigned char key, int xx, int yy) {
+	keystates[key] = 1;
+	
+	if(keystates[ESC]){
+		exit(0);
+	}
+	
 	int mod = glutGetModifiers();
 	if (mod == GLUT_ACTIVE_ALT){
 		if (key == ENTER){
 			toggle_fullscreen();
 		}
 	}
-	mod = 0;
-    switch(key){
-    	case ESC:
-    		exit(0);
-    		break;
-		case 'w':
-			up = 1;
-			break;
-		case 'a':
-			left = 1;
-			break;
-		case 's':
-			down = 1;
-			break;
-		case 'd':
-			right = 1;
-			break;
-		case 'c':
-			crouch = 1;
-			break;
-		case SPACEBAR:
-			jump = 1;
-			break;
-	}
 }
 
 void key_release(unsigned char key, int x, int y){
-	switch(key){
-		case 'w':
-			up = 0;
-			sprint = 1;
-			break;
-		case 'a':
-			left = 0;
-			break;
-		case 's':
-			down = 0;
-			break;
-		case 'd':
-			right = 0;
-			break;
-		case 'c':
-			crouch = 0;
-			break;
-	}
+	keystates[key] = 0;
 }
 
 void specKey_press(int key, int xx, int yy) {
@@ -240,42 +210,42 @@ void specKey_release(int key, int x, int y) {
 } 
 
 void move(){	
-	if(up && !down){
+	if((keystates[forward] || keystates[forward_caps]) && !(keystates[back] || keystates[back_caps])){
 		x += 0.03f * lx;
 		z += 0.03f * lz;
-		if(flying == 1){
+		if(spectator == 1){
 			y += 0.03f * ly;
 		}
 	}
-	if(!up && down){
+	if(!(keystates[forward] || keystates[forward_caps]) && (keystates[back] || keystates[back_caps])){
 		x -= 0.03f * lx;
 		z -= 0.03f * lz;
-		if(flying == 1){
+		if(spectator == 1){
 			y -= 0.03f * ly;
 		}
 	}
-	if(left && !right){
+	if((keystates[left] || keystates[left_caps]) && !(keystates[right] || keystates[right_caps])){
 		x += 0.03f * lz;
 		z -= 0.03f * lx;
 	}
-	if(!left && right){
+	if(!(keystates[left] || keystates[left_caps]) && (keystates[right] || keystates[right_caps])){
 		x -= 0.03f * lz;
 		z += 0.03f * lx;
 	}
-	if(jump){
-		if(y<3.0f){
-			y += 0.03f/(9.8*9.8/60);
-		}else if(y>=3.0f){
-			jump = 0;
-		}
-	}
-	if(!jump && y>1.8f && !flying){
-		y -= 0.03f/(9.8*9.8/60);
-	}
-	if(crouch){
+	if(keystates[crouch] || keystates[crouch_caps]){
 		if(y>1.0f){
 			y -= 0.03f/(9.8*9.8/60);
 		}
+	}
+	if(keystates[jump]){
+		if(y<3.0f){
+			y += 0.05f;
+		}else if(y>=3.0f){
+			keystates[jump] = 0;
+		}
+	}
+	if(!keystates[jump] && y>1.8f && !spectator){
+		y -= 0.02f;
 	}
 }
 
