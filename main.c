@@ -2,9 +2,9 @@
 #include <windows.h>
 #include <math.h>
 #include <GL/glut.h>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_timer.h>
+//#include <SDL2/SDL.h>
+//#include <SDL2/SDL_image.h>
+//#include <SDL2/SDL_timer.h>
 
 #define ENTER 13
 #define ESC 27
@@ -55,6 +55,8 @@ float lx=0.0f, ly=0.0f, lz=-1.0f;
 void screenResize(int w, int h);
 void toggle_fullscreen();
 void render3D(void);
+void drawGround();
+void drawGrid();
 void drawSnowMan();
 void key_press(unsigned char key, int xx, int yy);
 void key_release(unsigned char key, int x, int y);
@@ -128,9 +130,7 @@ void toggle_fullscreen() {
 }
 
 void render3D(void) {
-	if(!pause){
-		key_calc();
-	}
+	key_calc();
 	// Clear Color and Depth Buffers
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// Reset transformations
@@ -140,26 +140,45 @@ void render3D(void) {
 			x+lx, y+ly, z+lz,
 			0.0f, 1.0f, 0.0f);
 			
-// Draw ground
-	glColor3f(0.0f, 1.0f, 0.0f);
+	drawGround();
+// Draw 36 SnowMen
+	int i,j;
+	for(i=-3; i<3; i++){
+		for(j=-3; j<3; j++){
+			glPushMatrix();
+			glTranslatef(i*10.0,0,j * 10.0);
+			drawSnowMan();
+			glPopMatrix();
+        }
+    }
+    glutSwapBuffers();
+    glutPostRedisplay();
+}
+
+void drawGround(){																	
+	glColor3ub(150, 190, 150);	
 	glBegin(GL_QUADS);
 		glVertex3f(-100.0f, 0.0f, -100.0f);
 		glVertex3f(-100.0f, 0.0f,  100.0f);
 		glVertex3f( 100.0f, 0.0f,  100.0f);
 		glVertex3f( 100.0f, 0.0f, -100.0f);
 	glEnd();
+}
 
-// Draw 36 SnowMen
-	int i,j;
-	for(i=-3; i<3; i++)
-		for(j=-3; j<3; j++) {
-                     glPushMatrix();
-                     glTranslatef(i*10.0,0,j * 10.0);
-                     drawSnowMan();
-                     glPopMatrix();
-               }
-        glutSwapBuffers();
-} 
+void drawGrid(){																	
+	float i;
+	for(i = -500; i <= 500; i += 5)
+	{
+		glBegin(GL_LINES);
+			glColor3ub(150, 190, 150);							
+			glVertex3f(-500, 0, i);									
+			glVertex3f(500, 0, i);
+
+			glVertex3f(i, 0, -500);								
+			glVertex3f(i, 0, 500);
+		glEnd();
+	}
+}
 
 void drawSnowMan() {
 	glColor3f(1.0f, 1.0f, 1.0f);
@@ -192,6 +211,19 @@ void key_press(unsigned char key, int xx, int yy) {
 	}
 	
 	keystates[key] = 1;
+	
+	if(keystates[ESC]){
+		switch(pause){
+			case 0:
+				pause = 1;
+				glutSetCursor(GLUT_CURSOR_INHERIT);
+				break;
+			case 1:
+				pause = 0;
+				glutSetCursor(GLUT_CURSOR_NONE);
+				break;
+		}
+	}
 }
 
 void key_release(unsigned char key, int x, int y){
@@ -213,53 +245,43 @@ void specKey_release(int key, int x, int y) {
 } 
 
 void key_calc(){
-	if((keystates[forward] || keystates[forward_caps]) && !(keystates[back] || keystates[back_caps])){
-		x += speed_walk * lx;
-		z += speed_walk * lz;
-		if(spectator == 1){
-			y += speed_walk * ly;
+	if(!pause){
+		if((keystates[forward] || keystates[forward_caps]) && !(keystates[back] || keystates[back_caps])){
+			x += speed_walk * lx;
+			z += speed_walk * lz;
+			if(spectator == 1){
+				y += speed_walk * ly;
+			}
 		}
-	}
-	if(!(keystates[forward] || keystates[forward_caps]) && (keystates[back] || keystates[back_caps])){
-		x -= speed_walk * lx;
-		z -= speed_walk * lz;
-		if(spectator == 1){
-			y -= speed_walk * ly;
+		if(!(keystates[forward] || keystates[forward_caps]) && (keystates[back] || keystates[back_caps])){
+			x -= speed_walk * lx;
+			z -= speed_walk * lz;
+			if(spectator == 1){
+				y -= speed_walk * ly;
+			}
 		}
-	}
-	if((keystates[left] || keystates[left_caps]) && !(keystates[right] || keystates[right_caps])){
-		x += speed_walk * lz;
-		z -= speed_walk * lx;
-	}
-	if(!(keystates[left] || keystates[left_caps]) && (keystates[right] || keystates[right_caps])){
-		x -= speed_walk * lz;
-		z += speed_walk * lx;
-	}
-	if(keystates[crouch] || keystates[crouch_caps]){
-		if(y>height_player){
-			y -= 0.05f;
+		if((keystates[left] || keystates[left_caps]) && !(keystates[right] || keystates[right_caps])){
+			x += speed_walk * lz;
+			z -= speed_walk * lx;
 		}
-	}
-	if(keystates[jump]){
-		if(y<3.0f){
-			y += gravity;
-		}else if(y>=3.0f){
-			keystates[jump] = 0;
+		if(!(keystates[left] || keystates[left_caps]) && (keystates[right] || keystates[right_caps])){
+			x -= speed_walk * lz;
+			z += speed_walk * lx;
 		}
-	}
-	if(!keystates[jump] && y>height_player && !spectator){
-		y -= gravity;
-	}
-	if(keystates[ESC]){
-		switch(pause){
-			case 0:
-				pause = 1;
-				glutSetCursor(GLUT_CURSOR_INHERIT);
-				break;
-			case 1:
-				pause = 0;
-				glutSetCursor(GLUT_CURSOR_NONE);
-				break;
+		if(keystates[crouch] || keystates[crouch_caps]){
+			if(y>height_player){
+				y -= 0.05f;
+			}
+		}
+		if(keystates[jump]){
+			if(y<3.0f){
+				y += gravity;
+			}else if(y>=3.0f){
+				keystates[jump] = 0;
+			}
+		}
+		if(!keystates[jump] && y>height_player && !spectator){
+			y -= gravity;
 		}
 	}
 }
@@ -293,3 +315,4 @@ void mouseButton(int button, int state, int x, int y) {
 		}
 	}
 }
+
