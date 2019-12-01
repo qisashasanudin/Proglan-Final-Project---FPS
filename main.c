@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <math.h>
 #include <GL/glut.h>
+#include "mjkimage.h"
 //#include <SDL2/SDL.h>
 //#include <SDL2/SDL_image.h>
 //#include <SDL2/SDL_timer.h>
@@ -54,6 +55,7 @@ float lx=0.0f, ly=0.0f, lz=-1.0f;
 
 void screenResize(int w, int h);
 void toggle_fullscreen();
+GLuint LoadTexture(char *filename);
 void render3D(void);
 void drawGround();
 void drawGrid();
@@ -128,6 +130,18 @@ void toggle_fullscreen() {
     }
 }
 
+GLuint LoadTexture(char *filename){
+	GLuint ID;
+	ID = img;
+	
+	//glGenTextures(1, &ID);
+	glBindTexture(GL_TEXTURE_2D, ID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, ID);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	return ID;
+}
+
 void render3D(void) {
 	key_calc();
 	// Clear Color and Depth Buffers
@@ -138,7 +152,7 @@ void render3D(void) {
 	gluLookAt(	x, y, z,
 			x+lx, y+ly, z+lz,
 			0.0f, 1.0f, 0.0f);
-			
+	
 	drawGround();
 // Draw 36 SnowMen
 	int i,j;
@@ -154,12 +168,22 @@ void render3D(void) {
     glutPostRedisplay();
 }
 
-void drawGround(){																	
-	glColor3ub(150, 190, 150);	
+void drawGround(){
+	GLuint texture;
+ 	texture = LoadTexture("image1.bmp");
+ 	glBindTexture (GL_TEXTURE_2D, texture);
+	glEnable(GL_TEXTURE_2D);
+										
+	//glColor3ub(150, 190, 150);
+	glColor3f(1.0f, 1.0f, 1.0f);	
 	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0);
 		glVertex3f(-100.0f, 0.0f, -100.0f);
+		glTexCoord2f(1.0, 0.0);
 		glVertex3f(-100.0f, 0.0f,  100.0f);
+		glTexCoord2f(1.0, 1.0);
 		glVertex3f( 100.0f, 0.0f,  100.0f);
+		glTexCoord2f(0.0, 1.0);
 		glVertex3f( 100.0f, 0.0f, -100.0f);
 	glEnd();
 }
