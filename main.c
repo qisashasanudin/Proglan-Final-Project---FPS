@@ -69,7 +69,6 @@ void mouseButton(int button, int state, int x, int y);
 //===========================================================================================================================
 
 int main(int argc, char **argv) {
-
 	// init GLUT and create window
 	printf("initializing");
 	glutInit(&argc, argv);

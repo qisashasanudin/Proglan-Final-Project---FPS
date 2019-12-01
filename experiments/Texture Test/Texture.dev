@@ -1,6 +1,6 @@
 [Project]
-FileName=FPS.dev
-Name=FPS
+FileName=Texture.dev
+Name=Texture
 Type=1
 Ver=2
 ObjFiles=
@@ -11,7 +11,7 @@ ResourceIncludes=
 MakeIncludes=
 Compiler=
 CppCompiler=
-Linker=-lopengl32_@@_-lfreeglut_@@_-lglu32_@@_-lmingw32 _@@_-lSDL2main _@@_-lSDL2_@@_-lSDL2_image_@@_
+Linker=-lopengl32_@@_-lfreeglut_@@_-lglu32_@@_-lmingw32_@@_
 IsCpp=0
 Icon=
 ExeOutput=
@@ -19,7 +19,7 @@ ObjectOutput=
 LogOutput=
 LogOutputEnabled=0
 OverrideOutput=0
-OverrideOutputName=FPS.exe
+OverrideOutputName=Texture.exe
 HostApplication=
 UseCustomMakefile=0
 CustomMakefile=
