@@ -60,3 +60,6 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
+[Unit4]
+FileName=TextureLoader.c
+

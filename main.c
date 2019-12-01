@@ -2,10 +2,14 @@
 #include <windows.h>
 #include <math.h>
 #include <GL/glut.h>
-#include "mjkimage.h"
+#include <GL/glext.h>
+#include <GL/gl.h>
 //#include <SDL2/SDL.h>
 //#include <SDL2/SDL_image.h>
 //#include <SDL2/SDL_timer.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 #define ENTER 13
 #define ESC 27
@@ -32,9 +36,11 @@ const char right_caps = 'D';
 const char crouch = 'c';
 const char crouch_caps = 'C';
 const int jump = SPACEBAR;
+
 int sprint = 0;
 int spectator = 0;
 int pause = 0;
+int mouseSensitivity = 3;
 // angle of rotation for the camera direction
 const int xOrigin = 683;
 const int yOrigin = 384;
@@ -50,6 +56,7 @@ float x=0.0f, y=1.8f, z=5.0f;
 // actual vector representing the camera's direction
 float lx=0.0f, ly=0.0f, lz=-1.0f;
 
+GLuint *textures[2];
 
 //===========================================================================================================================
 
@@ -78,8 +85,12 @@ int main(int argc, char **argv) {
 	glutInitWindowPosition(100,100);
 	glutInitWindowSize(res_x,res_y);
 	glutCreateWindow(title);
+	glClearColor(0.498f, 0.83137f, 1.0f, 1.0f);
 	glutSetCursor(GLUT_CURSOR_NONE);
-
+	
+ 	textures[0] = LoadTexture("resources/grassblock.png");
+ 	textures[1] = LoadTexture("resources/dirtblock.jpg");
+	
 	// register callbacks
 	glutDisplayFunc(render3D);
 	glutReshapeFunc(screenResize);
@@ -131,14 +142,23 @@ void toggle_fullscreen() {
 }
 
 GLuint LoadTexture(char *filename){
-	GLuint ID;
-	ID = img;
+	int req_channels = 3; // 3 color channels of BMP-file   
+	int width = 0, height = 0, channels = 0;
+	GLuint ID = stbi_load( filename, &width, &height, &channels, 3 );
+	GLuint texture_obj = 0;
 	
-	//glGenTextures(1, &ID);
-	glBindTexture(GL_TEXTURE_2D, ID);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, ID);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	if ( ID != NULL ){
+		glBindTexture(GL_TEXTURE_2D, ID);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, ID);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		gluBuild2DMipmaps(GL_TEXTURE_2D, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, ID);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		stbi_image_free(ID);
+	}
 	return ID;
 }
 
@@ -166,26 +186,25 @@ void render3D(void) {
     }
     glutSwapBuffers();
     glutPostRedisplay();
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void drawGround(){
-	GLuint texture;
- 	texture = LoadTexture("image1.bmp");
- 	glBindTexture (GL_TEXTURE_2D, texture);
-	glEnable(GL_TEXTURE_2D);
-										
+void drawGround(){										
 	//glColor3ub(150, 190, 150);
-	glColor3f(1.0f, 1.0f, 1.0f);	
+	glColor3f(1.0f, 1.0f, 1.0f);
+	glBindTexture(GL_TEXTURE_2D, textures[0]);
+	glEnable(GL_TEXTURE_2D);
 	glBegin(GL_QUADS);
 		glTexCoord2f(0.0, 0.0);
 		glVertex3f(-100.0f, 0.0f, -100.0f);
-		glTexCoord2f(1.0, 0.0);
+		glTexCoord2f(100.0, 0.0);
 		glVertex3f(-100.0f, 0.0f,  100.0f);
-		glTexCoord2f(1.0, 1.0);
+		glTexCoord2f(100.0, 100.0);
 		glVertex3f( 100.0f, 0.0f,  100.0f);
-		glTexCoord2f(0.0, 1.0);
+		glTexCoord2f(0.0, 100.0);
 		glVertex3f( 100.0f, 0.0f, -100.0f);
 	glEnd();
+	glDisable(GL_TEXTURE_2D);
 }
 
 void drawGrid(){																	
@@ -311,8 +330,8 @@ void key_calc(){
 
 void camera(int x, int y) {
 	if(!pause){
-		deltaAngle_x += (x - xOrigin) * 0.001f;
-		deltaAngle_y += (y - yOrigin) * 0.001f;
+		deltaAngle_x += (x - xOrigin) * 0.0002f * mouseSensitivity;
+		deltaAngle_y += (y - yOrigin) * 0.0002f * mouseSensitivity;
 		
 		if(deltaAngle_y > 1.0f){
 			deltaAngle_y = 1.0f;
@@ -338,4 +357,3 @@ void mouseButton(int button, int state, int x, int y) {
 		}
 	}
 }
-
