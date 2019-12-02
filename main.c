@@ -311,7 +311,7 @@ void key_calc(){
 			z += speed_walk * lx;
 		}
 		if(keystates[crouch] || keystates[crouch_caps]){
-			if(y>height_player){
+			if(y>height_player/2){
 				y -= 0.05f;
 			}
 		}
