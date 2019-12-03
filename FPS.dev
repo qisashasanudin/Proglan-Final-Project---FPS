@@ -50,6 +50,12 @@ ProductVersion=1.0.0.0
 AutoIncBuildNr=0
 SyncProduct=1
 
+[Unit4]
+FileName=TextureLoader.c
+
+[Unit2]
+FileName=main.c
+
 [Unit1]
 FileName=main.c
 CompileCpp=0
@@ -59,7 +65,4 @@ Link=1
 Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
-
-[Unit4]
-FileName=TextureLoader.c
 

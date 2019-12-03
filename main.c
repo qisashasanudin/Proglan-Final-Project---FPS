@@ -17,7 +17,7 @@
 
 //===========================================================================================================================
 
-char title[] = "Saya sedih sekali";
+char title[] = "Proyek Akhir - FPS";
 int res_x = 1366;
 int res_y = 768;
 float fov = 60.0f;
@@ -49,7 +49,7 @@ float angle_y = 0.0f;
 float deltaAngle_x = 0.0f;
 float deltaAngle_y = 0.0f;
 float speed_walk = 0.03f;
-float gravity = 0.02f;
+float gravity = 0.015f;
 // current position of the camera
 float height_player = 1.8f;
 float x=0.0f, y=1.8f, z=5.0f;
@@ -62,7 +62,7 @@ GLuint *textures[2];
 
 void screenResize(int w, int h);
 void toggle_fullscreen();
-GLuint LoadTexture(char *filename);
+GLuint LoadTexture(char *filename, int generate);
 void render3D(void);
 void drawGround();
 void drawGrid();
@@ -77,19 +77,39 @@ void mouseButton(int button, int state, int x, int y);
 
 //===========================================================================================================================
 
+void myinit(void){
+static float lightPos[4] =
+{2.0, 4.0, 2.0, 1.0};
+static float lightAmb[4] =
+{0, 0, 0, 0};
+static float lightDiff[4] =
+{1, 1, 1, 1};
+static float lightSpec[4] =
+{1, 1, 1, 1};
+
+  glEnable(GL_LIGHT0);
+  glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+  glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmb);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiff);
+  glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpec);
+  glEnable(GL_LIGHTING);
+}
+
 int main(int argc, char **argv) {
 	// init GLUT and create window
 	printf("initializing");
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowPosition(100,100);
 	glutInitWindowSize(res_x,res_y);
 	glutCreateWindow(title);
+	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
 	glClearColor(0.498f, 0.83137f, 1.0f, 1.0f);
 	glutSetCursor(GLUT_CURSOR_NONE);
 	
- 	textures[0] = LoadTexture("resources/grassblock.png");
- 	textures[1] = LoadTexture("resources/dirtblock.jpg");
+	//myinit();
+	
+ 	textures[0] = LoadTexture("resources/grassblock.png", 1);
+ 	textures[1] = LoadTexture("resources/dirtblock.jpg", 1);
 	
 	// register callbacks
 	glutDisplayFunc(render3D);
@@ -135,28 +155,28 @@ void toggle_fullscreen() {
         glutFullScreen();
         is_fullscreen = 1;
     } else if(is_fullscreen){
-        glutReshapeWindow(res_x, res_y);
-        glutPositionWindow(100,100);
+		glutLeaveFullScreen();
         is_fullscreen = 0;
     }
 }
 
-GLuint LoadTexture(char *filename){
+GLuint LoadTexture(char *filename, int generate){
 	int req_channels = 3; // 3 color channels of BMP-file   
 	int width = 0, height = 0, channels = 0;
-	GLuint ID = stbi_load( filename, &width, &height, &channels, 3 );
-	GLuint texture_obj = 0;
-	
+	GLuint ID = stbi_load( filename, &width, &height, &channels, req_channels);	
 	if ( ID != NULL ){
+		//glGenTextures(1, &ID);
 		glBindTexture(GL_TEXTURE_2D, ID);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, ID);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		gluBuild2DMipmaps(GL_TEXTURE_2D, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, ID);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		if(generate){
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGB, width, height, GL_RGB, GL_UNSIGNED_BYTE, ID);
+		}else{
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, ID);
+		}
 		stbi_image_free(ID);
 	}
 	return ID;
@@ -312,12 +332,19 @@ void key_calc(){
 		}
 		if(keystates[crouch] || keystates[crouch_caps]){
 			if(y>height_player/2){
-				y -= 0.05f;
+				y -= 0.01f;
+				speed_walk = 0.03f/3;
+			}
+		}else if(!keystates[crouch] || !keystates[crouch_caps]){
+			if(y<height_player){
+				y += 0.01f;
+				speed_walk = 0.03f;
 			}
 		}
+		
 		if(keystates[jump]){
 			if(y<3.0f){
-				y += gravity;
+				y += gravity*2;
 			}else if(y>=3.0f){
 				keystates[jump] = 0;
 			}
