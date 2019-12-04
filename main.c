@@ -49,7 +49,7 @@ float angle_y = 0.0f;
 float deltaAngle_x = 0.0f;
 float deltaAngle_y = 0.0f;
 float speed_walk = 0.03f;
-float gravity = 0.015f;
+float gravity = 0.03f;
 // current position of the camera
 float height_player = 1.8f;
 float x=0.0f, y=1.8f, z=5.0f;
@@ -344,7 +344,7 @@ void key_calc(){
 		
 		if(keystates[jump]){
 			if(y<3.0f){
-				y += gravity*2;
+				y += gravity;
 			}else if(y>=3.0f){
 				keystates[jump] = 0;
 			}
