@@ -11,10 +11,13 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "vec3f.h"
 
 #define ENTER 13
 #define ESC 27
 #define SPACEBAR 32
+
+using namespace std;
 
 //===========================================================================================================================
 
@@ -26,20 +29,20 @@ int is_fullscreen = 0;
 const int refreshRate = 1000/60;
 // controls
 int keystates[256];
-const char forward = 'w';
-const char forward_caps = 'W';
+const char fwd = 'w';
+const char fwd_caps = 'W';
 const char back = 's';
 const char back_caps = 'S';
-const char left = 'a';
-const char left_caps = 'A';
-const char right = 'd';
-const char right_caps = 'D';
+const char lft = 'a';
+const char lft_caps = 'A';
+const char rgt = 'd';
+const char rgt_caps = 'D';
 const char crouch = 'c';
 const char crouch_caps = 'C';
 const int jump = SPACEBAR;
 
 int sprint = 0;
-int spectator = 0;
+int spectator = 1;
 int pause = 0;
 int mouseSensitivity = 3;
 // angle of rotation for the camera direction
@@ -49,8 +52,9 @@ float angle_x = 0.0f;
 float angle_y = 0.0f;
 float deltaAngle_x = 0.0f;
 float deltaAngle_y = 0.0f;
-float speed_walk = 0.03f;
-float gravity = 0.03f;
+float speed_walk = 0.2f;
+float speed_walk_temp = 0.1f;
+float gravity = 0.2f;
 // current position of the camera
 float height_player = 1.8f;
 float x=0.0f, y=1.8f, z=5.0f;
@@ -58,6 +62,157 @@ float x=0.0f, y=1.8f, z=5.0f;
 float lx=0.0f, ly=0.0f, lz=-1.0f;
 
 GLuint textures[2];
+float _angle = 60.0f;
+Terrain* terrainData;
+
+class Terrain {
+	private:
+		int w; //Width
+		int l; //Length
+		float** hs; //Heights
+		Vec3f** normals;
+		bool computedNormals; //Whether normals is up-to-date
+	public:
+		Terrain(int w2, int l2) {
+			w = w2;
+			l = l2;
+			
+			hs = new float*[l];
+			for(int i = 0; i < l; i++) {
+				hs[i] = new float[w];
+			}
+			
+			normals = new Vec3f*[l];
+			for(int i = 0; i < l; i++) {
+				normals[i] = new Vec3f[w];
+			}
+			
+			computedNormals = false;
+		}
+		
+		~Terrain() {
+			for(int i = 0; i < l; i++) {
+				delete[] hs[i];
+			}
+			delete[] hs;
+			
+			for(int i = 0; i < l; i++) {
+				delete[] normals[i];
+			}
+			delete[] normals;
+		}
+		
+		int width() {
+			return w;
+		}
+		
+		int length() {
+			return l;
+		}
+		
+		//Sets the height at (x, z) to y
+		void setHeight(int x, int z, float y) {
+			hs[z][x] = y;
+			computedNormals = false;
+		}
+		
+		//Returns the height at (x, z)
+		float getHeight(int x, int z) {
+			return hs[z][x];
+		}
+		
+		//Computes the normals, if they haven't been computed yet
+		void computeNormals() {
+			if (computedNormals) {
+				return;
+			}
+			
+			//Compute the rough version of the normals
+			Vec3f** normals2 = new Vec3f*[l];
+			for(int i = 0; i < l; i++) {
+				normals2[i] = new Vec3f[w];
+			}
+			
+			for(int z = 0; z < l; z++) {
+				for(int x = 0; x < w; x++) {
+					Vec3f sum(0.0f, 0.0f, 0.0f);
+					
+					Vec3f out;
+					if (z > 0) {
+						out = Vec3f(0.0f, hs[z - 1][x] - hs[z][x], -1.0f);
+					}
+					Vec3f in;
+					if (z < l - 1) {
+						in = Vec3f(0.0f, hs[z + 1][x] - hs[z][x], 1.0f);
+					}
+					Vec3f lft;
+					if (x > 0) {
+						lft = Vec3f(-1.0f, hs[z][x - 1] - hs[z][x], 0.0f);
+					}
+					Vec3f rgt;
+					if (x < w - 1) {
+						rgt = Vec3f(1.0f, hs[z][x + 1] - hs[z][x], 0.0f);
+					}
+					
+					if (x > 0 && z > 0) {
+						sum += out.cross(lft).normalize();
+					}
+					if (x > 0 && z < l - 1) {
+						sum += lft.cross(in).normalize();
+					}
+					if (x < w - 1 && z < l - 1) {
+						sum += in.cross(rgt).normalize();
+					}
+					if (x < w - 1 && z > 0) {
+						sum += rgt.cross(out).normalize();
+					}
+					
+					normals2[z][x] = sum;
+				}
+			}
+			
+			//Smooth out the normals
+			const float FALLOUT_RATIO = 0.5f;
+			for(int z = 0; z < l; z++) {
+				for(int x = 0; x < w; x++) {
+					Vec3f sum = normals2[z][x];
+					
+					if (x > 0) {
+						sum += normals2[z][x - 1] * FALLOUT_RATIO;
+					}
+					if (x < w - 1) {
+						sum += normals2[z][x + 1] * FALLOUT_RATIO;
+					}
+					if (z > 0) {
+						sum += normals2[z - 1][x] * FALLOUT_RATIO;
+					}
+					if (z < l - 1) {
+						sum += normals2[z + 1][x] * FALLOUT_RATIO;
+					}
+					
+					if (sum.magnitude() == 0) {
+						sum = Vec3f(0.0f, 1.0f, 0.0f);
+					}
+					normals[z][x] = sum;
+				}
+			}
+			
+			for(int i = 0; i < l; i++) {
+				delete[] normals2[i];
+			}
+			delete[] normals2;
+			
+			computedNormals = true;
+		}
+		
+		//Returns the normal at (x, z)
+		Vec3f getNormal(int x, int z) {
+			if (!computedNormals) {
+				computeNormals();
+			}
+			return normals[z][x];
+		}
+};
 
 //===========================================================================================================================
 
@@ -67,7 +222,9 @@ void toggle_fullscreen();
 GLuint LoadTexture(char* filename, int generate);
 void render3D();
 void init_lighting();
-void drawGround();
+Terrain* loadTerrain(const char* filename, float height);
+void cleanup();
+void drawTerrain();
 void drawGrid();
 void drawSnowMan();
 void key_press(unsigned char key, int xx, int yy);
@@ -133,8 +290,9 @@ void GL_init(){
 	glEnable(GL_NORMALIZE);
 	glShadeModel(GL_SMOOTH);
 	
-	textures[0] = LoadTexture("resources/grass.jpg", 1);
- 	textures[1] = LoadTexture("resources/dirtblock.jpg", 1);
+	//textures[0] = LoadTexture("resources/grass1.jpg", 1);
+ 	//textures[1] = LoadTexture("resources/sand.jpg", 1);
+ 	terrainData = loadTerrain("resources/heightmap6.png", 20);
 }
 
 void screenResize(int w, int h) {
@@ -145,7 +303,7 @@ void screenResize(int w, int h) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glViewport(0, 0, w, h);
-	gluPerspective(fov, ratio, 0.1f, 1000.0f);
+	gluPerspective(fov, ratio, 0.1f, 10000.0f);
 	glMatrixMode(GL_MODELVIEW);
 }
 
@@ -193,17 +351,16 @@ void render3D() {
 			x+lx, y+ly, z+lz,
 			0.0f, 1.0f, 0.0f);
 	
-	drawGround();
+	drawTerrain();
+	//drawGrid();
 // Draw 36 SnowMen
 	int i,j;
-	for(i=-3; i<3; i++){
-		for(j=-3; j<3; j++){
-			glPushMatrix();
-			glTranslatef(i*10.0,0,j * 10.0);
-			drawSnowMan();
-			glPopMatrix();
-        }
-    }
+	for(j=-3; j<3; j++){
+		glPushMatrix();
+		glTranslatef(j*10.0,0,10.0);
+		drawSnowMan();
+		glPopMatrix();
+	}
     glutSwapBuffers();
     glutPostRedisplay();
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -233,7 +390,50 @@ void init_lighting(){
 	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpec[0]);
 }
 
-void drawGround(){										
+Terrain* loadTerrain(const char* filename, float height) {
+	int req_channels = 3; // 3 color channels of BMP-file   
+	int data_width = 0, data_height = 0, channels = 0;
+	unsigned char *data = stbi_load(filename, &data_width, &data_height, &channels, req_channels);
+	
+	Terrain* t = new Terrain(data_width, data_height);
+	for(int y = 0; y < data_height; y++) {
+		for(int x = 0; x < data_width; x++) {
+			unsigned char color = (unsigned char)data[3 * (y * data_width + x)];
+			float h = height * ((color / 32.0f)-7);
+			t->setHeight(x, y, h);
+		}
+	}
+	stbi_image_free(data);
+	t->computeNormals();
+	return t;
+}
+
+void cleanup() {
+	delete terrainData;
+}
+
+void drawTerrain(){		
+	int scaling = 2;
+	Vec3f normal;								
+	glColor3f(0.824, 0.733, 0.639);
+	glRotatef(150,0.0f, 1.0f, 0.0f);
+	for(int z = 0; z < terrainData->length() - scaling; z+=scaling) {
+		glBegin(GL_TRIANGLE_STRIP);
+		for(int x = 0; x < terrainData->width(); x+=scaling) {
+
+			normal = terrainData->getNormal(x, z);
+			glNormal3f(normal[0], normal[1], normal[2]);
+			glVertex3f(x, terrainData->getHeight(x, z), z);
+
+			normal = terrainData->getNormal(x, z + scaling);
+			glNormal3f(normal[0], normal[1], normal[2]);
+			glVertex3f(x, terrainData->getHeight(x, z + scaling), z + scaling);
+		}
+		glEnd();
+	}
+}
+
+void drawGrid(){																	
 	//glColor3ub(150, 190, 150);
 	glColor3f(1.0f, 1.0f, 1.0f);
 	glBindTexture(GL_TEXTURE_2D, textures[0]);
@@ -250,21 +450,6 @@ void drawGround(){
 		glVertex3f( 100.0f, 0.0f, -100.0f);
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
-}
-
-void drawGrid(){																	
-	float i;
-	for(i = -500; i <= 500; i += 5)
-	{
-		glBegin(GL_LINES);
-			glColor3ub(150, 190, 150);							
-			glVertex3f(-500, 0, i);									
-			glVertex3f(500, 0, i);
-
-			glVertex3f(i, 0, -500);								
-			glVertex3f(i, 0, 500);
-		glEnd();
-	}
 }
 
 void drawSnowMan() {
@@ -333,37 +518,37 @@ void specKey_release(int key, int x, int y) {
 
 void key_calc(){
 	if(!pause){
-		if((keystates[forward] || keystates[forward_caps]) && !(keystates[back] || keystates[back_caps])){
+		if((keystates[fwd] || keystates[fwd_caps]) && !(keystates[back] || keystates[back_caps])){
 			x += speed_walk * lx;
 			z += speed_walk * lz;
 			if(spectator == 1){
 				y += speed_walk * ly;
 			}
 		}
-		if(!(keystates[forward] || keystates[forward_caps]) && (keystates[back] || keystates[back_caps])){
+		if(!(keystates[fwd] || keystates[fwd_caps]) && (keystates[back] || keystates[back_caps])){
 			x -= speed_walk * lx;
 			z -= speed_walk * lz;
 			if(spectator == 1){
 				y -= speed_walk * ly;
 			}
 		}
-		if((keystates[left] || keystates[left_caps]) && !(keystates[right] || keystates[right_caps])){
+		if((keystates[lft] || keystates[lft_caps]) && !(keystates[rgt] || keystates[rgt_caps])){
 			x += speed_walk * lz;
 			z -= speed_walk * lx;
 		}
-		if(!(keystates[left] || keystates[left_caps]) && (keystates[right] || keystates[right_caps])){
+		if(!(keystates[lft] || keystates[lft_caps]) && (keystates[rgt] || keystates[rgt_caps])){
 			x -= speed_walk * lz;
 			z += speed_walk * lx;
 		}
 		if(keystates[crouch] || keystates[crouch_caps]){
 			if(y>height_player/2){
-				y -= 0.01f;
-				speed_walk = 0.03f/3;
+				y -= gravity;
+				speed_walk = speed_walk_temp;
 			}
 		}else if(!keystates[crouch] || !keystates[crouch_caps]){
 			if(y<height_player && spectator != 1){
-				y += 0.01f;
-				speed_walk = 0.03f;
+				y += gravity;
+				speed_walk = speed_walk_temp*2;
 			}
 		}
 		
