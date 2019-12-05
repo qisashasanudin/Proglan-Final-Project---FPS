@@ -4,8 +4,8 @@
 CPP      = g++.exe
 CC       = gcc.exe
 WINDRES  = windres.exe
-OBJ      = main.o vec3f.o md2model.o imageloader.o
-LINKOBJ  = main.o vec3f.o md2model.o imageloader.o
+OBJ      = main.o imageloader.o text3d.o vec3f.o md2model.o
+LINKOBJ  = main.o imageloader.o text3d.o vec3f.o md2model.o
 LIBS     = -L"C:/Program Files (x86)/Dev-Cpp/MinGW64/lib" -L"C:/Program Files (x86)/Dev-Cpp/MinGW64/x86_64-w64-mingw32/lib" -L"C:/MinGW/SDL2-2.0.10/lib" -L"C:/MinGW/SDL2_image-2.0.5/x86_64-w64-mingw32/lib" -static-libgcc -lopengl32 -lfreeglut -lglu32 -lmingw32  -lSDL2main  -lSDL2 -lSDL2_image
 INCS     = -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/x86_64-w64-mingw32/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/lib/gcc/x86_64-w64-mingw32/4.9.2/include" -I"C:/MinGW/SDL2-2.0.10/include" -I"C:/MinGW/glfw-3.3/include" -I"C:/MinGW/glad/include" -I"C:/MinGW/SDL2_image-2.0.5/x86_64-w64-mingw32/include"
 CXXINCS  = -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/x86_64-w64-mingw32/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/lib/gcc/x86_64-w64-mingw32/4.9.2/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/lib/gcc/x86_64-w64-mingw32/4.9.2/include/c++" -I"C:/MinGW/SDL2-2.0.10/include" -I"C:/MinGW/glfw-3.3/include" -I"C:/MinGW/glad/include" -I"C:/MinGW/SDL2_image-2.0.5/x86_64-w64-mingw32/include"
@@ -27,11 +27,14 @@ $(BIN): $(OBJ)
 main.o: main.cpp
 	$(CPP) -c main.cpp -o main.o $(CXXFLAGS)
 
+imageloader.o: imageloader.cpp
+	$(CPP) -c imageloader.cpp -o imageloader.o $(CXXFLAGS)
+
+text3d.o: text3d.cpp
+	$(CPP) -c text3d.cpp -o text3d.o $(CXXFLAGS)
+
 vec3f.o: vec3f.cpp
 	$(CPP) -c vec3f.cpp -o vec3f.o $(CXXFLAGS)
 
 md2model.o: md2model.cpp
 	$(CPP) -c md2model.cpp -o md2model.o $(CXXFLAGS)
-
-imageloader.o: imageloader.cpp
-	$(CPP) -c imageloader.cpp -o imageloader.o $(CXXFLAGS)

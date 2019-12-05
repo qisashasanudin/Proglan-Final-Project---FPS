@@ -16,7 +16,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-/* File for "Animation" lesson of the OpenGL tutorial on
+/* File for "Putting It All Together" lesson of the OpenGL tutorial on
  * www.videotutorialsrock.com
  */
 
@@ -315,7 +315,6 @@ MD2Model::MD2Model() {
 	frames = NULL;
 	texCoords = NULL;
 	triangles = NULL;
-	time = 0;
 }
 
 //Loads the MD2 model
@@ -450,21 +449,17 @@ void MD2Model::setAnimation(const char* name) {
 	}
 }
 
-void MD2Model::advance(float dt) {
-	if (dt < 0) {
-		return;
-	}
-	
-	time += dt;
-	if (time < 1000000000) {
+void MD2Model::draw(float time) {
+	if (time > -100000000 && time < 1000000000) {
 		time -= (int)time;
+		if (time < 0) {
+			time += 1;
+		}
 	}
 	else {
 		time = 0;
 	}
-}
-
-void MD2Model::draw() {
+	
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, textureId);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

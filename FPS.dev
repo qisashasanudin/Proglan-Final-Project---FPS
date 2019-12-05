@@ -29,7 +29,7 @@ IncludeVersionInfo=0
 SupportXPThemes=0
 CompilerSet=0
 CompilerSettings=0000000000000000000000000
-UnitCount=8
+UnitCount=11
 
 [VersionInfo]
 Major=1
@@ -50,16 +50,6 @@ ProductVersion=1.0.0.0
 AutoIncBuildNr=0
 SyncProduct=1
 
-[Unit4]
-FileName=vec3f.h
-CompileCpp=1
-Folder=
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
 [Unit1]
 FileName=main.cpp
 CompileCpp=1
@@ -70,8 +60,8 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit5]
-FileName=md2model.cpp
+[Unit6]
+FileName=vec3f.h
 CompileCpp=1
 Folder=
 Compile=1
@@ -80,8 +70,8 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit6]
-FileName=md2model.h
+[Unit8]
+FileName=text3d.cpp
 CompileCpp=1
 Folder=
 Compile=1
@@ -91,7 +81,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit2]
-FileName=stb_image.h
+FileName=imageloader.h
 CompileCpp=1
 Folder=
 Compile=1
@@ -101,7 +91,17 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit3]
-FileName=vec3f.cpp
+FileName=Main.h
+CompileCpp=1
+Folder=
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit5]
+FileName=text3d.h
 CompileCpp=1
 Folder=
 Compile=1
@@ -120,8 +120,38 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit8]
-FileName=imageloader.h
+[Unit4]
+FileName=stb_image.h
+CompileCpp=1
+Folder=
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit9]
+FileName=vec3f.cpp
+CompileCpp=1
+Folder=
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit10]
+FileName=md2model.h
+CompileCpp=1
+Folder=
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit11]
+FileName=md2model.cpp
 CompileCpp=1
 Folder=
 Compile=1

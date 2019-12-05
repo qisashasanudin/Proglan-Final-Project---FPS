@@ -16,7 +16,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-/* File for "Animation" lesson of the OpenGL tutorial on
+/* File for "Putting It All Together" lesson of the OpenGL tutorial on
  * www.videotutorialsrock.com
  */
 
@@ -66,24 +66,18 @@ class MD2Model {
 		int startFrame; //The first frame of the current animation
 		int endFrame;   //The last frame of the current animation
 		
-		/* The position in the current animation.  0 indicates the beginning of
-		 * the animation, which is at the starting frame, and 1 indicates the
-		 * end of the animation, which is right when the starting frame is
-		 * reached again.  It always lies between 0 and 1.
-		 */
-		float time;
-		
 		MD2Model();
 	public:
 		~MD2Model();
 		
 		//Switches to the given animation
 		void setAnimation(const char* name);
-		//Advances the position in the current animation.  The entire animation
-		//lasts one unit of time.
-		void advance(float dt);
-		//Draws the current state of the animated model.
-		void draw();
+		/* Draws the state of the animated model at the specified time in the
+		 * animation.  A time of i, integer i, indicates the beginning of the
+		 * animation, and a time of i + 0.5 indicates halfway through the
+		 * animation.
+		 */
+		void draw(float time);
 		
 		//Loads an MD2Model from the specified file.  Returns NULL if there was
 		//an error loading it.
