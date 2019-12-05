@@ -64,14 +64,14 @@ float angle_x = 0.0f;
 float angle_y = 0.0f;
 float deltaAngle_x = 0.0f;
 float deltaAngle_y = 0.0f;
-float speed_walk = 0.3f;
-float speed_walk_temp = 0.15f;
-float gravity = 0.9f;
+float speed_walk = 0.4f;
+float speed_walk_temp = 0.2f;
+float gravity = 1;
 // current position of the camera
-float height_player = 2;
-float x=0.0f, y=0.0f, z=0.0f;
+float height_player = 3;
+float x=250.0f, y=10.0f, z=500.0f;
 // actual vector representing the camera's direction
-float lx=0.659379f, ly=0.016199f, lz=0.751811f;
+float lx=0.0f, ly=0.0f, lz=0.0f;
 
 GLuint textureData[2];
 float terrain_angle = 60.0f;
@@ -228,7 +228,7 @@ Terrain* terrainData[2];
 const float PI = 3.1415926535f;
 const int NUM_GUYS = 300;
 //The width of the terrain in units, after scaling
-const float TERRAIN_WIDTH = 1081;
+const float TERRAIN_WIDTH = 2000;
 //The amount of time between each time that we handle collisions
 const float TIME_BETWEEN_HANDLE_COLLISIONS = 0.01f;
 //The amount by which the Guy class's step function advances the state of a guy
@@ -246,6 +246,7 @@ void init_lighting();
 Terrain* loadTerrain(const char* filename, float height);
 void cleanup();
 void drawTerrain(Terrain* terrain);
+void drawGround();
 float heightAt(Terrain* terrain, float x, float z);
 void key_press(unsigned char key, int xx, int yy);
 void key_release(unsigned char key, int x, int y);
@@ -847,8 +848,8 @@ void GL_init(){
 	glEnable(GL_NORMALIZE);
 	glShadeModel(GL_SMOOTH);
 	
-	textureData[0] = LoadTexture("resources/textures/grass2.jpg", 1);
- 	//textureData[1] = LoadTexture("resources/textures/sand.jpg", 1);
+	//textureData[0] = LoadTexture("resources/textures/grass2.jpg", 1);
+ 	textureData[1] = LoadTexture("resources/textures/sand.jpg", 1);
  	terrainData[0] = loadTerrain("resources/textures/heightmap6.png", 20);
  	t3dInit();		 //Initialize text drawing functionality
 	_model = MD2Model::load("blockybalboa.md2");	//Load the model
@@ -874,7 +875,7 @@ void screenResize(int w, int h) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glViewport(0, 0, w, h);
-	gluPerspective(fov, ratio, 0.1f, 1000.0f);
+	gluPerspective(fov, ratio, 0.1f, 3000.0f);
 	glMatrixMode(GL_MODELVIEW);
 }
 
@@ -1012,20 +1013,44 @@ void drawTerrain(Terrain* terrain){
 	int scaling = 2;
 	Vec3f normal;								
 	glColor3f(0.9059f, 0.9412f, 0.6784f);
+	//glBindTexture(GL_TEXTURE_2D, textureData[1]);
+	//glEnable(GL_TEXTURE_2D);
 	for(int z = 0; z < terrain->length()-scaling; z+=scaling) {
 		glBegin(GL_TRIANGLE_STRIP);
+		//int a, b;
 		for(int x = 0; x < terrain->width(); x+=scaling) {
-
+			
+			//glTexCoord2f(a, b);
 			normal = terrain->getNormal(x, z);
 			glNormal3f(normal[0], normal[1], normal[2]);
 			glVertex3f(x, terrain->getHeight(x, z), z);
-
+			
+			//glTexCoord2f(a, b);
 			normal = terrain->getNormal(x, z + scaling);
 			glNormal3f(normal[0], normal[1], normal[2]);
 			glVertex3f(x, terrain->getHeight(x, z + scaling), z + scaling);
 		}
 		glEnd();
+		//glDisable(GL_TEXTURE_2D);
 	}
+}
+
+void drawGround(){										
+	//glColor3ub(150, 190, 150);
+	glColor3f(1.0f, 1.0f, 1.0f);
+	glBindTexture(GL_TEXTURE_2D, textureData[0]);
+	glEnable(GL_TEXTURE_2D);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0);
+		glVertex3f(-100.0f, 0.0f, -100.0f);
+		glTexCoord2f(100.0, 0.0);
+		glVertex3f(-100.0f, 0.0f,  100.0f);
+		glTexCoord2f(100.0, 100.0);
+		glVertex3f( 100.0f, 0.0f,  100.0f);
+		glTexCoord2f(0.0, 100.0);
+		glVertex3f( 100.0f, 0.0f, -100.0f);
+	glEnd();
+	glDisable(GL_TEXTURE_2D);
 }
 
 float heightAt(Terrain* terrain, float x, float z) {
@@ -1112,7 +1137,7 @@ void specKey_release(int key, int x, int y) {
 } 
 
 void key_calc(float terrainScale){
-	float height_terrain = (terrainScale * heightAt(terrainData[0], x, z)) + height_player;
+	float height_terrain = (terrainScale * heightAt(terrainData[0], x/terrainScale, z/terrainScale)) + height_player;
 	if(!pause){
 		if((keystates[fwd] || keystates[fwd_caps]) && !(keystates[back] || keystates[back_caps])){
 			x += speed_walk * lx;
