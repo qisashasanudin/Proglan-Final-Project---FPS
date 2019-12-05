@@ -1,16 +1,23 @@
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
+#include <set>
 #include <stdlib.h>
+#include <vector>
 #include <windows.h>
 #include <math.h>
+#include <GL/gl.h>
 #include <GL/glut.h>
 #include <GL/glext.h>
-#include <GL/gl.h>
 //#include <SDL2/SDL.h>
 //#include <SDL2/SDL_image.h>
 //#include <SDL2/SDL_timer.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+
+#include "imageloader.h"
+#include "md2model.h"
 #include "vec3f.h"
 
 #define ENTER 13
@@ -52,9 +59,9 @@ float angle_x = 0.0f;
 float angle_y = 0.0f;
 float deltaAngle_x = 0.0f;
 float deltaAngle_y = 0.0f;
-float speed_walk = 0.2f;
-float speed_walk_temp = 0.1f;
-float gravity = 0.2f;
+float speed_walk = 0.3f;
+float speed_walk_temp = 0.15f;
+float gravity = 0.3f;
 // current position of the camera
 float height_player = 1.8f;
 float x=0.0f, y=1.8f, z=5.0f;
@@ -62,9 +69,8 @@ float x=0.0f, y=1.8f, z=5.0f;
 float lx=0.0f, ly=0.0f, lz=-1.0f;
 
 GLuint textures[2];
-float _angle = 60.0f;
-Terrain* terrainData;
 
+float terrain_angle = 60.0f;
 class Terrain {
 	private:
 		int w; //Width
@@ -213,6 +219,14 @@ class Terrain {
 			return normals[z][x];
 		}
 };
+Terrain* terrainData;
+
+const float FLOOR_TEXTURE_SIZE = 15.0f; //The size of each floor "tile"
+float _angle = 30.0f;
+MD2Model* modelData;
+int _textureId;
+//The forward position of the guy relative to an arbitrary floor "tile"
+float _guyPos = 0;
 
 //===========================================================================================================================
 
@@ -225,8 +239,9 @@ void init_lighting();
 Terrain* loadTerrain(const char* filename, float height);
 void cleanup();
 void drawTerrain();
-void drawGrid();
+void drawFlatGround();
 void drawSnowMan();
+void update(int value);
 void key_press(unsigned char key, int xx, int yy);
 void key_release(unsigned char key, int x, int y);
 void specKey_press(int key, int xx, int yy);
@@ -262,6 +277,7 @@ int main(int argc, char **argv) {
 	glutKeyboardUpFunc(key_release);
 	glutSpecialFunc(specKey_press);
 	glutSpecialUpFunc(specKey_release);
+	glutTimerFunc(5, update, 0);
 
 	// camera & mouse input
 	glutPassiveMotionFunc(camera);
@@ -290,9 +306,13 @@ void GL_init(){
 	glEnable(GL_NORMALIZE);
 	glShadeModel(GL_SMOOTH);
 	
-	//textures[0] = LoadTexture("resources/grass1.jpg", 1);
- 	//textures[1] = LoadTexture("resources/sand.jpg", 1);
- 	terrainData = loadTerrain("resources/heightmap6.png", 20);
+	textures[0] = LoadTexture("resources/textures/grass2.jpg", 1);
+ 	//textures[1] = LoadTexture("resources/textures/sand.jpg", 1);
+ 	terrainData = loadTerrain("resources/textures/heightmap6.png", 20);
+ 	modelData = MD2Model::load("tallguy.md2");
+	if(modelData != NULL){
+		modelData->setAnimation("run");
+	}
 }
 
 void screenResize(int w, int h) {
@@ -303,7 +323,7 @@ void screenResize(int w, int h) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glViewport(0, 0, w, h);
-	gluPerspective(fov, ratio, 0.1f, 10000.0f);
+	gluPerspective(fov, ratio, 0.1f, 1000.0f);
 	glMatrixMode(GL_MODELVIEW);
 }
 
@@ -350,17 +370,21 @@ void render3D() {
 	gluLookAt(	x, y, z,
 			x+lx, y+ly, z+lz,
 			0.0f, 1.0f, 0.0f);
-	
-	drawTerrain();
-	//drawGrid();
-// Draw 36 SnowMen
-	int i,j;
-	for(j=-3; j<3; j++){
+			
+	//Draw the guy
+	if (modelData != NULL) {
 		glPushMatrix();
-		glTranslatef(j*10.0,0,10.0);
-		drawSnowMan();
+		glTranslatef(0, 2, 0);
+		glRotatef(-90.0f, 0.0f, 0.0f, 1.0f);
+		glScalef(0.1f, 0.2f, 0.1f);
+		modelData->draw();
 		glPopMatrix();
+		glTranslatef(0, -2, 0);
 	}
+			
+	drawTerrain();
+	drawFlatGround();
+	
     glutSwapBuffers();
     glutPostRedisplay();
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -399,7 +423,7 @@ Terrain* loadTerrain(const char* filename, float height) {
 	for(int y = 0; y < data_height; y++) {
 		for(int x = 0; x < data_width; x++) {
 			unsigned char color = (unsigned char)data[3 * (y * data_width + x)];
-			float h = height * ((color / 32.0f)-7);
+			float h = height * ((color / 32.0f)-6.6f);
 			t->setHeight(x, y, h);
 		}
 	}
@@ -410,14 +434,16 @@ Terrain* loadTerrain(const char* filename, float height) {
 
 void cleanup() {
 	delete terrainData;
+	delete modelData;
 }
 
-void drawTerrain(){		
+void drawTerrain(){	
 	int scaling = 2;
 	Vec3f normal;								
 	glColor3f(0.824, 0.733, 0.639);
 	glRotatef(150,0.0f, 1.0f, 0.0f);
-	for(int z = 0; z < terrainData->length() - scaling; z+=scaling) {
+	glTranslatef(-280.0f, 0, -280.0f);
+	for(int z = 0; z < terrainData->length()-scaling; z+=scaling) {
 		glBegin(GL_TRIANGLE_STRIP);
 		for(int x = 0; x < terrainData->width(); x+=scaling) {
 
@@ -433,9 +459,10 @@ void drawTerrain(){
 	}
 }
 
-void drawGrid(){																	
+void drawFlatGround(){										
 	//glColor3ub(150, 190, 150);
 	glColor3f(1.0f, 1.0f, 1.0f);
+	glTranslatef(400.0f, 0, 400.0f);
 	glBindTexture(GL_TEXTURE_2D, textures[0]);
 	glEnable(GL_TEXTURE_2D);
 	glBegin(GL_QUADS);
@@ -450,6 +477,13 @@ void drawGrid(){
 		glVertex3f( 100.0f, 0.0f, -100.0f);
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
+	
+	for(int i=-3; i<3; i++){
+			glPushMatrix();
+			glTranslatef(i*10.0,0,10.0);
+			drawSnowMan();
+			glPopMatrix();
+        }
 }
 
 void drawSnowMan() {
@@ -472,6 +506,24 @@ void drawSnowMan() {
 	glColor3f(1.0f, 0.5f , 0.5f);
 	glRotatef(0.0f,1.0f, 0.0f, 0.0f);
 	glutSolidCone(0.08f,0.5f,10,2);
+}
+
+void update(int value) {
+	_angle += 0.7f;
+	if (_angle > 360) {
+		_angle -= 360;
+	}
+	//Advance the animation
+	if (modelData != NULL) {
+		modelData->advance(0.025f);
+	}
+	//Update _guyPos
+	_guyPos += 0.08f;
+	while (_guyPos > FLOOR_TEXTURE_SIZE) {
+		_guyPos -= FLOOR_TEXTURE_SIZE;
+	}
+	glutPostRedisplay();
+	glutTimerFunc(5, update, 0);
 }
 
 void key_press(unsigned char key, int xx, int yy) {
