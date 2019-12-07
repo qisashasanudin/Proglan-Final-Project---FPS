@@ -575,7 +575,7 @@ void update(int value) {
 			_numCollisions);
 	
 	glutPostRedisplay();
-	glutTimerFunc(25, update, 0);
+	glutTimerFunc(1000/60, update, 0);
 }
 
 #endif

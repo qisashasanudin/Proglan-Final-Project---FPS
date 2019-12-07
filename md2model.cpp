@@ -23,6 +23,9 @@
 
 
 #include <fstream>
+#include <GL/gl.h>
+#include <GL/glut.h>
+#include <GL/glext.h>
 
 #include "imageloader.h"
 #include "md2model.h"
@@ -278,21 +281,24 @@ namespace {
 		return Vec3f(x, y, z);
 	}
 	
-	//Makes the image into a texture, and returns the id of the texture
-	GLuint loadTexture(Image *image) {
-		GLuint textureId;
-		glGenTextures(1, &textureId);
-		glBindTexture(GL_TEXTURE_2D, textureId);
-		glTexImage2D(GL_TEXTURE_2D,
-					 0,
-					 GL_RGB,
-					 image->width, image->height,
-					 0,
-					 GL_RGB,
-					 GL_UNSIGNED_BYTE,
-					 image->pixels);
-		return textureId;
+	//Makes the image into a texture, and returns the id of the texture	
+	GLuint loadTexture(Image *image){
+	int generate = 1;
+	GLuint ID;
+	glGenTextures(1, &ID);
+	glBindTexture(GL_TEXTURE_2D, ID);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+	if(generate){
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGB, image->width, image->height, GL_RGB, GL_UNSIGNED_BYTE, image->pixels);
+	}else{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image->width, image->height, 0, GL_RGB, GL_UNSIGNED_BYTE, image->pixels);
 	}
+	return ID;
+}
 }
 
 MD2Model::~MD2Model() {
@@ -462,8 +468,6 @@ void MD2Model::draw(float time) {
 	
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	
 	//Figure out the two frames between which we are interpolating
 	int frameIndex1 = (int)(time * (endFrame - startFrame + 1)) + startFrame;

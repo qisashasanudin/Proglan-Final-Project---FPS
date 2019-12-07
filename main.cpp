@@ -40,11 +40,13 @@ int res_x = 1366;
 int res_y = 768;
 float fov = 80.0f;
 int is_fullscreen = 0;
-const int refreshRate = 1000/60;
-float sky_r=0.1255f, sky_g=0.01961f, sky_b=0.1294f;
+const int framerate = 1000/60;
+float sky_r=0.1255f, sky_g=0.01961f, sky_b=0.1294f;		//blue sky : 0.498f, 0.83137f, 1.0f;
+float view_dist = 2000.0f;
 
 // controls
 int keystates[256];
+int modifierstates[256];
 const char fwd = 'w';
 const char fwd_caps = 'W';
 const char back = 's';
@@ -68,12 +70,12 @@ float angle_x = 0.0f;
 float angle_y = 0.0f;
 float deltaAngle_x = 0.0f;
 float deltaAngle_y = 0.0f;
-float speed_walk = 0.4f;
+float speed_walk = 0.8f;
 float speed_walk_temp = 0.2f;
 float gravity = 1;
 // current position of the camera
-float height_player = 3;
-float x=250.0f, y=10.0f, z=500.0f;
+float height_player = 2.0f;
+float x=300.0f, y=10.0f, z=600.0f;
 // actual vector representing the camera's direction
 float lx=0.0f, ly=0.0f, lz=0.0f;
 
@@ -104,14 +106,13 @@ void mouseButton(int button, int state, int x, int y);
 
 int main(int argc, char **argv) {
 	// init GLUT and create window
-	printf("initializing");
+	printf("initializing\n");
 	glutInit(&argc, argv);
 	GL_init();
 		
 	// register callbacks
 	glutDisplayFunc(render3D);
 	glutReshapeFunc(screenResize);
-	glutIdleFunc(render3D);
 
 	//keyboard input
 	glutIgnoreKeyRepeat(1);
@@ -119,7 +120,7 @@ int main(int argc, char **argv) {
 	glutKeyboardUpFunc(key_release);
 	glutSpecialFunc(specKey_press);
 	glutSpecialUpFunc(specKey_release);
-	glutTimerFunc(25, update, 0);
+	glutTimerFunc(framerate, update, 0);
 
 	// camera & mouse input
 	glutPassiveMotionFunc(camera);
@@ -138,9 +139,9 @@ void GL_init(){
 	glutInitWindowSize(res_x,res_y);
 	glutCreateWindow(title);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
-	//glClearColor(0.498f, 0.83137f, 1.0f, 1.0f);
 	glClearColor(sky_r, sky_g, sky_b, 1.0f);
 	glutSetCursor(GLUT_CURSOR_NONE);
+	toggle_fullscreen();
 	
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_COLOR_MATERIAL);
@@ -184,7 +185,7 @@ void screenResize(int w, int h) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glViewport(0, 0, w, h);
-	gluPerspective(fov, ratio, 0.1f, 3000.0f);
+	gluPerspective(fov, ratio, 0.1f, view_dist);
 	glMatrixMode(GL_MODELVIEW);
 }
 
@@ -234,19 +235,13 @@ void render3D() {
 			x+lx, y+ly, z+lz,
 			0.0f, 1.0f, 0.0f);
 	
-	glPushMatrix();
-	glColor3f(1.0,0.0,0.0);
-	glTranslatef(x, y, z);
-	glTranslatef(0.05f, -0.05f, 0);
-	glRotatef(180-(angle_x + deltaAngle_x)*180.0/3.14, 0, 1.0, 0.0);
-	glutSolidCone(0.05f,0.5f,10,2);
-	glPopMatrix();
+
 	
 	GLfloat fogColor[]={sky_r, sky_g, sky_b, 1};
 	glFogfv(GL_FOG_COLOR, fogColor);
 	glFogi(GL_FOG_MODE, GL_LINEAR); //GL_EXP, GL_EXP2
-	glFogf(GL_FOG_START,200.0f);
-	glFogf(GL_FOG_END,2000.0f);
+	glFogf(GL_FOG_START,view_dist/5);
+	glFogf(GL_FOG_END,view_dist);
 	//glFogf(GL_FOG_DENSITY, 0.05f);
 	
 	//Draw the Endermans
@@ -305,6 +300,7 @@ Terrain* loadTerrain(const char* filename, float height) {
 }
 
 void cleanup() {
+	delete textureData;
 	delete terrainData;
 	delete _model;
 	
@@ -358,32 +354,23 @@ void drawGround(){
 	glDisable(GL_TEXTURE_2D);
 }
 
-void key_press(unsigned char key, int xx, int yy) {
-	int mod = glutGetModifiers();
-	if (mod == GLUT_ACTIVE_ALT){
+void key_press(unsigned char key, int xx, int yy) {	
+	keystates[key] = 1;
+	modifierstates[glutGetModifiers()] = 1;
+	
+	if(glutGetModifiers() & GLUT_ACTIVE_ALT){
 		if (key == ENTER){
 			toggle_fullscreen();
 		}
 	}
-	
-	keystates[key] = 1;
-	
 	if(keystates[ESC]){
-		switch(pause){
-			case 0:
-				pause = 1;
-				glutSetCursor(GLUT_CURSOR_INHERIT);
-				break;
-			case 1:
-				pause = 0;
-				glutSetCursor(GLUT_CURSOR_NONE);
-				break;
-		}
+		cleanup();
 	}
 }
 
 void key_release(unsigned char key, int x, int y){
 	keystates[key] = 0;
+	memset(modifierstates, 0, sizeof(modifierstates));
 }
 
 void specKey_press(int key, int xx, int yy) {
@@ -403,6 +390,9 @@ void specKey_release(int key, int x, int y) {
 void key_calc(float terrainScale){
 	float height_terrain = (terrainScale * heightAt(terrainData[0], x/terrainScale, z/terrainScale)) + height_player;
 	if(!pause){
+		if(!keystates[jump] && !spectator){
+			y -= gravity;
+		}
 		if((keystates[fwd] || keystates[fwd_caps]) && !(keystates[back] || keystates[back_caps])){
 			x += speed_walk * lx;
 			z += speed_walk * lz;
@@ -417,6 +407,19 @@ void key_calc(float terrainScale){
 				y -= speed_walk * ly;
 			}
 		}
+		
+		/*
+		
+			if (keystates['w'] || keystates['W']){
+		if(glutGetModifiers() & GLUT_ACTIVE_SHIFT){
+			speed_walk = speed_walk_temp*3;
+		}else{
+			speed_walk = speed_walk_temp;
+		}
+	}
+		*/
+		
+		
 		if((keystates[lft] || keystates[lft_caps]) && !(keystates[rgt] || keystates[rgt_caps])){
 			x += speed_walk * lz;
 			z -= speed_walk * lx;
@@ -426,36 +429,26 @@ void key_calc(float terrainScale){
 			z += speed_walk * lx;
 		}
 		
-		/*
-		if(keystates[crouch] || keystates[crouch_caps]){
-			y = height_terrain/2;
-			speed_walk = speed_walk_temp;
-		}else if(!keystates[crouch] || !keystates[crouch_caps]){
-			if(y<height_terrain && spectator != 1){
-				y = height_terrain;
-				speed_walk = speed_walk_temp;
-			}
-		}
-		*/
-		
 		if(keystates[jump]){
-			if(y<height_terrain + 4.0f){
-				y += gravity;
-			}else if(y>= height_terrain + 4.0f){
+			if(y < height_terrain + height_player*2){
+				y += gravity/1.5;
+			}else if(y >= height_terrain + height_player*2){
 				keystates[jump] = 0;
 			}
 		}
-		if(!keystates[jump] && y>height_terrain && !spectator){
-			y -= gravity;
-		}
-		if(y <= height_terrain && (!keystates[crouch] || !keystates[crouch_caps])){
+		}if(y <= height_terrain && (!keystates[crouch] && !keystates[crouch_caps]) && !spectator){
 			y = height_terrain;
-		}
+			speed_walk = speed_walk_temp;
+		}else if(y <= (height_terrain - height_player/2) && (keystates[crouch] || keystates[crouch_caps]) && !spectator){
+			y = (height_terrain - height_player/2);
+			speed_walk = speed_walk_temp/2;
 	}
 }
 
 void camera(int x, int y) {
 	if(!pause){
+		glutSetCursor(GLUT_CURSOR_NONE);
+		glutWarpPointer(res_x/2, res_y/2);
 		deltaAngle_x += (x - xOrigin) * 0.0002f * mouseSensitivity;
 		deltaAngle_y += (y - yOrigin) * 0.0002f * mouseSensitivity;
 		
@@ -468,9 +461,11 @@ void camera(int x, int y) {
 		lx = sin(angle_x + deltaAngle_x);
 		ly = -sin(angle_y + deltaAngle_y);
 		lz = -cos(angle_x + deltaAngle_x);
-		
 		glutWarpPointer(res_x/2, res_y/2);
+	}else if(pause){
+		glutSetCursor(GLUT_CURSOR_INHERIT);
 	}
+	glutPostRedisplay();
 }
 
 void mouseButton(int button, int state, int x, int y) {
