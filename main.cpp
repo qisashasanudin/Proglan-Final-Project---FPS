@@ -42,7 +42,9 @@ float fov = 80.0f;
 int is_fullscreen = 0;
 const int framerate = 1000/60;
 float sky_r=0.5843f, sky_g=0.7922f, sky_b=1.0f;		//end world : sky_r=0.1255f, sky_g=0.01961f, sky_b=0.1294f;
-float view_dist = 5000.0f;
+float view_dist = 10000.0f;
+
+int map=1, mode=1;
 
 // controls
 int keystates[256];
@@ -78,11 +80,12 @@ float gravity = 0.98f;
 float speed = 0;
 float time_falling = 0.03;
 // camera's initial position
-float x=2000.0f, y=1000.0f, z=1000.0f;
+float x=4027.06f, y=0.0f, z=1313.62f;
 float lx=0.0f, ly=0.0f, lz=0.0f;
 
 GLuint textureData[2];
 Terrain* terrainData[2];
+GLuint displayListId;
 
 //===========================================================================================================================
 
@@ -92,10 +95,10 @@ void toggle_fullscreen();
 GLuint LoadTexture(char* filename, int generate);
 void render3D();
 void init_lighting();
+void init_fog();
 Terrain* loadTerrain(const char* filename, float height);
 void cleanup();
 void drawTerrain(Terrain* terrain);
-void drawGround();
 void key_press(unsigned char key, int xx, int yy);
 void key_release(unsigned char key, int x, int y);
 void specKey_press(int key, int xx, int yy);
@@ -107,8 +110,7 @@ void mouseButton(int button, int state, int x, int y);
 //===========================================================================================================================
 
 int main(int argc, char **argv) {
-	// init GLUT and create window
-	printf("initializing\n");
+	// init GLUT and create window	
 	glutInit(&argc, argv);
 	GL_init();
 		
@@ -140,13 +142,34 @@ void GL_init(){
 	glutInitWindowPosition(100,100);
 	glutInitWindowSize(res_x,res_y);
 	glutCreateWindow(title);
-	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
-	glClearColor(sky_r, sky_g, sky_b, 1.0f);
+	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_STENCIL);
 	glutSetCursor(GLUT_CURSOR_NONE);
 	toggle_fullscreen();
 	
+	switch(map){
+		case 1:
+			terrainData[0] = loadTerrain("resources/textures/sukabumi.png", 20);
+			break;
+		case 2:
+			terrainData[0] = loadTerrain("resources/textures/hawaii.png", 20);
+			break;
+	}
+	switch(mode){
+		case 1:
+			textureData[0] = LoadTexture("resources/textures/grass2.jpg", 1);
+			sky_r=0.5843f;
+			sky_g=0.7922f;
+			sky_b=1.0f;
+			break;
+		case 2:
+			textureData[0] = LoadTexture("resources/textures/endstone.png", 1);
+			sky_r=0.1255f;
+			sky_g=0.01961f;
+			sky_b=0.1294f;
+			break;
+	}
+	glClearColor(sky_r, sky_g, sky_b, 1.0f);
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 	glEnable(GL_LIGHT1);
@@ -157,12 +180,11 @@ void GL_init(){
 	//glEnable(GL_LIGHT6);
 	//glEnable(GL_LIGHT7);
 	glEnable(GL_NORMALIZE);
+	glEnable(GL_COLOR_MATERIAL);
 	glShadeModel(GL_SMOOTH);
 	glEnable(GL_FOG);
-	
-	//textureData[0] = LoadTexture("resources/textures/grass2.jpg", 1);
- 	textureData[1] = LoadTexture("resources/textures/sand.jpg", 1);
- 	terrainData[0] = loadTerrain("resources/textures/heightmap6.png", 20);
+	glEnable(GL_CULL_FACE);
+ 	
  	t3dInit();		 //Initialize text drawing functionality
 	_model = MD2Model::load("blockybalboa.md2");	//Load the model
 	if (_model != NULL) {
@@ -177,6 +199,13 @@ void GL_init(){
 	for(unsigned int i = 0; i < _Endermans.size(); i++) {
 		_quadtree->add(_Endermans[i]);
 	}
+	
+	displayListId = glGenLists(1);
+	glNewList(displayListId, GL_COMPILE);
+	drawTerrain(terrainData[0]);
+	init_lighting();
+	init_fog();
+	glEndList();
 }
 
 void screenResize(int w, int h) {
@@ -227,39 +256,25 @@ void render3D() {
 	float scale = TERRAIN_WIDTH / (terrainData[0]->width() - 1);
 	control(scale);
 	// Clear Color and Depth Buffers
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	// Reset transformations
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	init_lighting();
 	// Set the camera
 	gluLookAt(	x, y, z,
 			x+lx, y+ly, z+lz,
 			0.0f, 1.0f, 0.0f);
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	GLfloat fogColor[]={sky_r, sky_g, sky_b, 1};
-	glFogfv(GL_FOG_COLOR, fogColor);
-	glFogi(GL_FOG_MODE, GL_LINEAR); //GL_EXP, GL_EXP2
-	glFogf(GL_FOG_START,view_dist/100);
-	glFogf(GL_FOG_END,view_dist);
-	//glFogf(GL_FOG_DENSITY, 0.05f);
-	
+	printf("%f, %f, %f - %f, %f, %f\n", x,y,z,lx,ly,lz);
 	//Draw the Endermans
+	glCullFace(GL_FRONT);
 	for(unsigned int i = 0; i < _Endermans.size(); i++) {
 		_Endermans[i]->draw();
 	}
+	glCullFace(GL_BACK);
 	
 	//Draw the terrain
 	glScalef(scale, scale, scale);
-	drawTerrain(terrainData[0]);
+	glCallList(displayListId);
 	
     glutSwapBuffers();
     glutPostRedisplay();
@@ -288,6 +303,15 @@ void init_lighting(){
 								   1, 1, 1, 1};
 	//glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmb[0]);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpec[0]);
+}
+
+void init_fog(){
+	GLfloat fogColor[]={sky_r, sky_g, sky_b, 1};
+	glFogfv(GL_FOG_COLOR, fogColor);
+	glFogi(GL_FOG_MODE, GL_LINEAR); //GL_EXP, GL_EXP2
+	glFogf(GL_FOG_START,1);
+	glFogf(GL_FOG_END,view_dist);
+	//glFogf(GL_FOG_DENSITY, 0.05f);
 }
 
 Terrain* loadTerrain(const char* filename, float height) {
@@ -320,10 +344,10 @@ void cleanup() {
 }
 
 void drawTerrain(Terrain* terrain){
-	int scaling = 2;
+	int scaling = 1;
 	Vec3f normal;								
 	//glColor3f(0.9059f, 0.9412f, 0.6784f);
-	glBindTexture(GL_TEXTURE_2D, textureData[1]);
+	glBindTexture(GL_TEXTURE_2D, textureData[0]);
 	glEnable(GL_TEXTURE_2D);
 	for(int z = 0; z < terrain->length()-scaling; z+=scaling) {
 		int a=0, b=0;
@@ -333,41 +357,15 @@ void drawTerrain(Terrain* terrain){
 			normal = terrain->getNormal(x, z);
 			glNormal3f(normal[0], normal[1], normal[2]);
 			glVertex3f(x, terrain->getHeight(x, z), z);
-			if(a){
-				a=0;
-			}else{
-				a=1;
-			}
+			a = !a;
 			glTexCoord2f(a, b);
 			normal = terrain->getNormal(x, z + scaling);
 			glNormal3f(normal[0], normal[1], normal[2]);
 			glVertex3f(x, terrain->getHeight(x, z + scaling), z + scaling);
-			if(b){
-				b=0;
-			}else{
-				b=1;
-			}
+			b = !b;
 		}
 		glEnd();
 	}
-	glDisable(GL_TEXTURE_2D);
-}
-
-void drawGround(){										
-	//glColor3ub(150, 190, 150);
-	glColor3f(1.0f, 1.0f, 1.0f);
-	glBindTexture(GL_TEXTURE_2D, textureData[0]);
-	glEnable(GL_TEXTURE_2D);
-	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0);
-		glVertex3f(-100.0f, 0.0f, -100.0f);
-		glTexCoord2f(100.0, 0.0);
-		glVertex3f(-100.0f, 0.0f,  100.0f);
-		glTexCoord2f(100.0, 100.0);
-		glVertex3f( 100.0f, 0.0f,  100.0f);
-		glTexCoord2f(0.0, 100.0);
-		glVertex3f( 100.0f, 0.0f, -100.0f);
-	glEnd();
 	glDisable(GL_TEXTURE_2D);
 }
 
@@ -380,18 +378,10 @@ void key_press(unsigned char key, int xx, int yy) {
 		}
 	}
 	if(keystates['`'] || keystates['~']){
-		if(!spectator){
-			spectator = 1;
-		}else if(spectator){
-			spectator = 0;
-		}
+		spectator = !spectator;
 	}
 	if(keystates['p'] || keystates['P']){
-		if(!pause){
-			pause = 1;
-		}else if(pause){
-			pause = 0;
-		}
+		pause = !pause;
 	}
 }
 
@@ -423,7 +413,7 @@ void control(float terrainScale){
 			if(spectator){
 				speed_walk = speed_walk_temp*50.0f;
 			}else{
-				speed_walk = speed_walk_temp*2;
+				speed_walk = speed_walk_temp*2.0f;
 			}
 		}else if(keystates[crouch] || keystates[crouch_caps]){
 			height_player = height_player_temp/2;
@@ -453,17 +443,17 @@ void control(float terrainScale){
 		}
 		if(keystates[jump]){
 			if(y <= height_terrain+0.3){
-				speed = 0.5;
+				speed = 0.3;
 			}
 		}
 	}
 	if(!spectator){
 		y += speed;
-		time_falling += 0.01;
+		time_falling += 0.005;
 		speed -= gravity * time_falling;
 		if(y <= height_terrain){
 			y = height_terrain;
-			time_falling = 0.03;
+			time_falling = 0.01;
 			speed = 0;
 		}
 	}
@@ -493,7 +483,6 @@ void camera(int x, int y) {
 	}else if(pause){
 		glutSetCursor(GLUT_CURSOR_INHERIT);
 	}
-	printf("%f, %f, %f - %f, %f, %f\n", x,y,z,lx,ly,lz);
 	glutPostRedisplay();
 }
 
