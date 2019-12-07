@@ -23,9 +23,9 @@
 using namespace std;
 
 const float PI = 3.1415926535f;
-const int NUM_EndermanS = 300;
+const int NUM_EndermanS = 500;
 //The width of the terrain in units, after scaling
-const float TERRAIN_WIDTH = 2000;
+const float TERRAIN_WIDTH = 5000;
 //The amount of time between each time that we handle collisions
 const float TIME_BETWEEN_HANDLE_COLLISIONS = 0.01f;
 //The amount by which the Enderman class's step function advances the state of a Enderman
@@ -200,8 +200,7 @@ class Enderman {
 		
 		//Returns the current height of the Enderman on the terrain
 		float y() {
-			return terrainScale *
-				heightAt(terrain, x0 / terrainScale, z0 / terrainScale);
+			return terrainScale *heightAt(terrain, x0 / terrainScale, z0 / terrainScale);
 		}
 		
 		float velocityX() {
