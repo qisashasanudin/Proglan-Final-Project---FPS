@@ -24,7 +24,23 @@ extern	HWND		hWnd;			// Holds Our Window Handle
 extern	HINSTANCE	hInstance;		// Holds The Instance Of The Application
 
 
-
+void GL_init();
+void screenResize(int w, int h);
+void toggle_fullscreen();
+GLuint LoadTexture(char* filename, int generate);
+void render3D();
+void init_lighting();
+Terrain* loadTerrain(const char* filename, float height);
+void cleanup();
+void drawTerrain(Terrain* terrain);
+void drawGround();
+void key_press(unsigned char key, int xx, int yy);
+void key_release(unsigned char key, int x, int y);
+void specKey_press(int key, int xx, int yy);
+void specKey_release(int key, int x, int y);
+void key_calc(float terrainScale);
+void camera(int x, int y);
+void mouseButton(int button, int state, int x, int y);
 
 
 #endif

@@ -26,6 +26,7 @@
 #include "text3d.h"
 #include "terrain.h"
 #include "enderman.h"
+//#include "bullet.h"
 
 #define ENTER 13
 #define ESC 27
@@ -40,7 +41,7 @@ int res_y = 768;
 float fov = 80.0f;
 int is_fullscreen = 0;
 const int framerate = 1000/60;
-float sky_r=0.45196f, sky_g=0.87157f, sky_b=1.0f;		//end world : sky_r=0.1255f, sky_g=0.01961f, sky_b=0.1294f;
+float sky_r=0.5843f, sky_g=0.7922f, sky_b=1.0f;		//end world : sky_r=0.1255f, sky_g=0.01961f, sky_b=0.1294f;
 float view_dist = 5000.0f;
 
 // controls
@@ -71,11 +72,13 @@ float deltaAngle_x = 0.0f;
 float deltaAngle_y = 0.0f;
 float speed_walk = 0.3f;
 float speed_walk_temp = 0.3f;
-float height_player = 2.0f;
-float height_player_temp = 2.0f;
+float height_player = 3.0f;
+float height_player_temp = 3.0f;
 float gravity = 0.98f;
+float speed = 0;
+float time_falling = 0.03;
 // camera's initial position
-float x=2000.0f, y=0.0f, z=1000.0f;
+float x=2000.0f, y=1000.0f, z=1000.0f;
 float lx=0.0f, ly=0.0f, lz=0.0f;
 
 GLuint textureData[2];
@@ -97,7 +100,7 @@ void key_press(unsigned char key, int xx, int yy);
 void key_release(unsigned char key, int x, int y);
 void specKey_press(int key, int xx, int yy);
 void specKey_release(int key, int x, int y);
-void key_calc(float terrainScale);
+void control(float terrainScale);
 void camera(int x, int y);
 void mouseButton(int button, int state, int x, int y);
 
@@ -222,7 +225,7 @@ GLuint LoadTexture(char* filename, int generate){
 
 void render3D() {
 	float scale = TERRAIN_WIDTH / (terrainData[0]->width() - 1);
-	key_calc(scale);
+	control(scale);
 	// Clear Color and Depth Buffers
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// Reset transformations
@@ -234,17 +237,18 @@ void render3D() {
 			x+lx, y+ly, z+lz,
 			0.0f, 1.0f, 0.0f);
 	
-
-
-
-
-
-
+	
+	
+	
+	
+	
+	
+	
 	
 	GLfloat fogColor[]={sky_r, sky_g, sky_b, 1};
 	glFogfv(GL_FOG_COLOR, fogColor);
 	glFogi(GL_FOG_MODE, GL_LINEAR); //GL_EXP, GL_EXP2
-	glFogf(GL_FOG_START,view_dist/10);
+	glFogf(GL_FOG_START,view_dist/100);
 	glFogf(GL_FOG_END,view_dist);
 	//glFogf(GL_FOG_DENSITY, 0.05f);
 	
@@ -315,7 +319,7 @@ void cleanup() {
 	t3dCleanup();
 }
 
-void drawTerrain(Terrain* terrain){	
+void drawTerrain(Terrain* terrain){
 	int scaling = 2;
 	Vec3f normal;								
 	//glColor3f(0.9059f, 0.9412f, 0.6784f);
@@ -409,12 +413,8 @@ void specKey_release(int key, int x, int y) {
     }
 } 
 
-void key_calc(float terrainScale){
+void control(float terrainScale){
 	float height_terrain = (terrainScale * heightAt(terrainData[0], x/terrainScale, z/terrainScale)) + height_player;
-	if(keystates[ESC]){
-		cleanup();
-		exit(0);
-	}
 	if(!pause){
 		if((!keystates[crouch] && !keystates[crouch_caps]) && (!keystates[sprint] && !keystates[sprint_caps])){
 			height_player = height_player_temp;
@@ -452,17 +452,24 @@ void key_calc(float terrainScale){
 			z += speed_walk * lx;
 		}
 		if(keystates[jump]){
-			y += gravity;
-			if((y >= height_terrain + 3) && !spectator){
-				keystates[jump] = 0;
+			if(y <= height_terrain+0.3){
+				speed = 0.5;
 			}
 		}
-		if(!keystates[jump] && !spectator){
-			y -= gravity;
-			if(y <= height_terrain){
-				y = height_terrain;
-			}
+	}
+	if(!spectator){
+		y += speed;
+		time_falling += 0.01;
+		speed -= gravity * time_falling;
+		if(y <= height_terrain){
+			y = height_terrain;
+			time_falling = 0.03;
+			speed = 0;
 		}
+	}
+	if(keystates[ESC]){
+		cleanup();
+		exit(0);
 	}
 }
 
@@ -486,6 +493,7 @@ void camera(int x, int y) {
 	}else if(pause){
 		glutSetCursor(GLUT_CURSOR_INHERIT);
 	}
+	printf("%f, %f, %f - %f, %f, %f\n", x,y,z,lx,ly,lz);
 	glutPostRedisplay();
 }
 

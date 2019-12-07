@@ -19,11 +19,12 @@
 #include "vec3f.h"
 #include "text3d.h"
 #include "terrain.h"
+//#include "bullet.h"
 
 using namespace std;
 
 const float PI = 3.1415926535f;
-const int NUM_EndermanS = 500;
+const int NUM_EndermanS = 300;
 //The width of the terrain in units, after scaling
 const float TERRAIN_WIDTH = 5000;
 //The amount of time between each time that we handle collisions
@@ -177,7 +178,7 @@ class Enderman {
 				return;
 			}
 			
-			float scale = radius0 / 2.5f;
+			float scale = radius0 / 1.5f;
 			
 			glPushMatrix();
 			glTranslatef(x0, scale * 10.0f + y(), z0);
