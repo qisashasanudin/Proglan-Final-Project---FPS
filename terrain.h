@@ -2,7 +2,6 @@
 #define TERRAIN_H
 
 #include <math.h>
-
 #include "vec3f.h"
 
 class Terrain {
@@ -153,6 +152,24 @@ class Terrain {
 			return normals[z][x];
 		}
 };
+
+Terrain* loadTerrain(const char* filename, float height) {
+	int req_channels = 3; // 3 color channels of BMP-file   
+	int data_width = 0, data_height = 0, channels = 0;
+	unsigned char *data = stbi_load(filename, &data_width, &data_height, &channels, req_channels);
+	
+	Terrain* t = new Terrain(data_width, data_height);
+	for(int y = 0; y < data_height; y++) {
+		for(int x = 0; x < data_width; x++) {
+			unsigned char color = (unsigned char)data[3 * (y * data_width + x)];
+			float h = height * ((color / 32.0f));
+			t->setHeight(x, y, h);
+		}
+	}
+	stbi_image_free(data);
+	t->computeNormals();
+	return t;
+}
 
 float heightAt(Terrain* terrain, float x, float z) {
 	//Returns the approximate height of the terrain at the specified (x, z) position

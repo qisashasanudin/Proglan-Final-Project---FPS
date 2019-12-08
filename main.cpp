@@ -42,10 +42,11 @@ float fov = 80.0f;
 int is_fullscreen = 0;
 const int framerate = 1000/60;
 float sky_r=0.5843f, sky_g=0.7922f, sky_b=1.0f;		//end world : sky_r=0.1255f, sky_g=0.01961f, sky_b=0.1294f;
-float view_dist = 10000.0f/2;
+float view_dist = 10000.0f;
+int terrainQuality = 2;
 int map=2, mode=1;
 // camera's initial position
-float x=4027.06f/2, y=0.0f/2, z=1313.62f/2;
+float x=4027.06f, y=0.0f, z=1313.62f;
 float lx=0.0f, ly=0.0f, lz=0.0f;
 
 // controls
@@ -96,13 +97,10 @@ GLuint LoadTexture(char* filename, int generate);
 void render3D();
 void init_lighting();
 void init_fog();
-Terrain* loadTerrain(const char* filename, float height);
 void cleanup();
 void drawTerrain(Terrain* terrain);
 void key_press(unsigned char key, int xx, int yy);
 void key_release(unsigned char key, int x, int y);
-void specKey_press(int key, int xx, int yy);
-void specKey_release(int key, int x, int y);
 void control(float terrainScale);
 void camera(int x, int y);
 void mouseButton(int button, int state, int x, int y);
@@ -122,8 +120,6 @@ int main(int argc, char **argv) {
 	glutIgnoreKeyRepeat(1);
 	glutKeyboardFunc(key_press);
 	glutKeyboardUpFunc(key_release);
-	glutSpecialFunc(specKey_press);
-	glutSpecialUpFunc(specKey_release);
 	glutTimerFunc(framerate, update, 0);
 
 	// camera & mouse input
@@ -142,7 +138,7 @@ void GL_init(){
 	glutInitWindowPosition(100,100);
 	glutInitWindowSize(res_x,res_y);
 	glutCreateWindow(title);
-	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_STENCIL);
+	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
 	glutSetCursor(GLUT_CURSOR_NONE);
 	toggle_fullscreen();
 	
@@ -168,6 +164,7 @@ void GL_init(){
 			sky_b=0.1294f;
 			break;
 	}
+	
 	glClearColor(sky_r, sky_g, sky_b, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
@@ -185,7 +182,7 @@ void GL_init(){
 	glEnable(GL_FOG);
 	glEnable(GL_CULL_FACE);
  	
- 	t3dInit();		 //Initialize text drawing functionality
+ 	//t3dInit();		 //Initialize text drawing functionality
 	_model = MD2Model::load("blockybalboa.md2");	//Load the model
 	if (_model != NULL) {
 		_model->setAnimation("run");
@@ -202,9 +199,9 @@ void GL_init(){
 	
 	displayListId = glGenLists(1);
 	glNewList(displayListId, GL_COMPILE);
-	drawTerrain(terrainData[0]);
-	init_lighting();
-	init_fog();
+		drawTerrain(terrainData[0]);
+		init_lighting();
+		init_fog();
 	glEndList();
 }
 
@@ -256,7 +253,7 @@ void render3D() {
 	float scale = TERRAIN_WIDTH / (terrainData[0]->width() - 1);
 	control(scale);
 	// Clear Color and Depth Buffers
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// Reset transformations
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -296,25 +293,21 @@ void init_lighting(){
 	//ambient light
 	static float ambientColor[8][4] ={0.4, 0.4, 0.4, 1,
 									  0.2, 0.2, 0.2, 1};
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientColor[0]);
-	
-	//positioned light
 	static float lightColor[8][4] ={0.5, 0.5, 0.5, 1,
 								    0.5, 0.2, 0.2, 1};
 	static float lightPos[8][4] ={0, 10000, 0, 1,
 								  -1.0, 0.5, 0.5, 1};
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor[0]);
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPos[0]);
-	//glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor[1]);
-	//glLightfv(GL_LIGHT1, GL_POSITION, lightPos[1]);
-	
-	//ambient light
-	//static float lightAmb[8][4] ={0.4, 0.4, 0.4, 1,
-	//							  0.2, 0.2, 0.2, 1};
 	static float lightSpec[8][4] ={1, 1, 1, 1,
 								   1, 1, 1, 1};
-	//glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmb[0]);
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientColor[0]);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor[0]);
+	glLightfv(GL_LIGHT0, GL_POSITION, lightPos[0]);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpec[0]);
+	//static float lightAmb[8][4] ={0.4, 0.4, 0.4, 1,
+	//							  0.2, 0.2, 0.2, 1};
+	//glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor[1]);
+	//glLightfv(GL_LIGHT1, GL_POSITION, lightPos[1]);
+	//glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmb[0]);
 }
 
 void init_fog(){
@@ -326,43 +319,24 @@ void init_fog(){
 	//glFogf(GL_FOG_DENSITY, 0.05f);
 }
 
-Terrain* loadTerrain(const char* filename, float height) {
-	int req_channels = 3; // 3 color channels of BMP-file   
-	int data_width = 0, data_height = 0, channels = 0;
-	unsigned char *data = stbi_load(filename, &data_width, &data_height, &channels, req_channels);
-	
-	Terrain* t = new Terrain(data_width, data_height);
-	for(int y = 0; y < data_height; y++) {
-		for(int x = 0; x < data_width; x++) {
-			unsigned char color = (unsigned char)data[3 * (y * data_width + x)];
-			float h = height * ((color / 32.0f));
-			t->setHeight(x, y, h);
-		}
-	}
-	stbi_image_free(data);
-	t->computeNormals();
-	return t;
-}
-
 void drawTerrain(Terrain* terrain){
-	int scaling = 1;
 	Vec3f normal;								
 	//glColor3f(0.9059f, 0.9412f, 0.6784f);
 	glBindTexture(GL_TEXTURE_2D, textureData[0]);
 	glEnable(GL_TEXTURE_2D);
-	for(int z = 0; z < terrain->length()-scaling; z+=scaling) {
+	for(int z = 0; z < terrain->length()-terrainQuality; z+=terrainQuality) {
 		int a=0, b=0;
 		glBegin(GL_TRIANGLE_STRIP);
-		for(int x = 0; x < terrain->width(); x+=scaling) {
+		for(int x = 0; x < terrain->width(); x+=terrainQuality) {
 			glTexCoord2f(a, b);
 			normal = terrain->getNormal(x, z);
 			glNormal3f(normal[0], normal[1], normal[2]);
 			glVertex3f(x, terrain->getHeight(x, z), z);
 			a = !a;
 			glTexCoord2f(a, b);
-			normal = terrain->getNormal(x, z + scaling);
+			normal = terrain->getNormal(x, z + terrainQuality);
 			glNormal3f(normal[0], normal[1], normal[2]);
-			glVertex3f(x, terrain->getHeight(x, z + scaling), z + scaling);
+			glVertex3f(x, terrain->getHeight(x, z + terrainQuality), z + terrainQuality);
 			b = !b;
 		}
 		glEnd();
@@ -401,22 +375,9 @@ void key_release(unsigned char key, int x, int y){
 	keystates[key] = 0;
 }
 
-void specKey_press(int key, int xx, int yy) {
-
-    switch (key) {
-    	
-    }
-} 
-
-void specKey_release(int key, int x, int y) { 	
-
-    switch (key) {
-    	
-    }
-} 
-
 void control(float terrainScale){
 	float height_terrain = (terrainScale * heightAt(terrainData[0], x/terrainScale, z/terrainScale)) + height_player;
+	
 	if(!pause){
 		if((!keystates[crouch] && !keystates[crouch_caps]) && (!keystates[sprint] && !keystates[sprint_caps])){
 			height_player = height_player_temp;
