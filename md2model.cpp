@@ -520,5 +520,3 @@ void MD2Model::draw(float time) {
 
 
 
-
-

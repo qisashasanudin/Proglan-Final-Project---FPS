@@ -1,5 +1,5 @@
 
-//creadits : www.videotutorialsrock.com, www.lighthouse3d.com
+//Referensi : www.videotutorialsrock.com, www.lighthouse3d.com
 
 #include <cstdlib>
 #include <ctime>
@@ -42,9 +42,11 @@ float fov = 80.0f;
 int is_fullscreen = 0;
 const int framerate = 1000/60;
 float sky_r=0.5843f, sky_g=0.7922f, sky_b=1.0f;		//end world : sky_r=0.1255f, sky_g=0.01961f, sky_b=0.1294f;
-float view_dist = 10000.0f;
-
-int map=1, mode=1;
+float view_dist = 10000.0f/2;
+int map=2, mode=1;
+// camera's initial position
+float x=4027.06f/2, y=0.0f/2, z=1313.62f/2;
+float lx=0.0f, ly=0.0f, lz=0.0f;
 
 // controls
 int keystates[256];
@@ -79,12 +81,10 @@ float height_player_temp = 3.0f;
 float gravity = 0.98f;
 float speed = 0;
 float time_falling = 0.03;
-// camera's initial position
-float x=4027.06f, y=0.0f, z=1313.62f;
-float lx=0.0f, ly=0.0f, lz=0.0f;
 
 GLuint textureData[2];
 Terrain* terrainData[2];
+MD2Model* _model;
 GLuint displayListId;
 
 //===========================================================================================================================
@@ -264,7 +264,19 @@ void render3D() {
 	gluLookAt(	x, y, z,
 			x+lx, y+ly, z+lz,
 			0.0f, 1.0f, 0.0f);
-	printf("%f, %f, %f - %f, %f, %f\n", x,y,z,lx,ly,lz);
+	
+	
+	
+	glPushMatrix();
+	glColor3f(0.5,0.5,0.5);
+	glTranslatef(x, y-0.2f, z);
+	glRotatef(180-(angle_x + deltaAngle_x)*180.0/3.14, 0.0, 1.0, 0.0);
+	glRotatef((angle_y + deltaAngle_y)*120.0/3.14, 1.0, 0.0, 0.0);
+	glutSolidCone(0.1f,1.0f,10,4);
+	glPopMatrix();
+	
+	
+	
 	//Draw the Endermans
 	glCullFace(GL_FRONT);
 	for(unsigned int i = 0; i < _Endermans.size(); i++) {
@@ -332,17 +344,6 @@ Terrain* loadTerrain(const char* filename, float height) {
 	return t;
 }
 
-void cleanup() {
-	delete textureData;
-	delete terrainData;
-	delete _model;
-	
-	for(unsigned int i = 0; i < _Endermans.size(); i++) {
-		delete _Endermans[i];
-	}
-	t3dCleanup();
-}
-
 void drawTerrain(Terrain* terrain){
 	int scaling = 1;
 	Vec3f normal;								
@@ -367,6 +368,17 @@ void drawTerrain(Terrain* terrain){
 		glEnd();
 	}
 	glDisable(GL_TEXTURE_2D);
+}
+
+void cleanup() {
+	delete textureData;
+	delete terrainData;
+	delete _model;
+	
+	for(unsigned int i = 0; i < _Endermans.size(); i++) {
+		delete _Endermans[i];
+	}
+	t3dCleanup();
 }
 
 void key_press(unsigned char key, int xx, int yy) {	
@@ -442,18 +454,18 @@ void control(float terrainScale){
 			z += speed_walk * lx;
 		}
 		if(keystates[jump]){
-			if(y <= height_terrain+0.3){
-				speed = 0.3;
+			if(y <= height_terrain+0.2){
+				speed = 0.4;
 			}
 		}
 	}
 	if(!spectator){
 		y += speed;
-		time_falling += 0.005;
+		time_falling += 0.003;
 		speed -= gravity * time_falling;
 		if(y <= height_terrain){
 			y = height_terrain;
-			time_falling = 0.01;
+			time_falling = 0.03;
 			speed = 0;
 		}
 	}

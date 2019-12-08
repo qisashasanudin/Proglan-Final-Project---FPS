@@ -26,7 +26,7 @@ using namespace std;
 const float PI = 3.1415926535f;
 const int NUM_EndermanS = 500;
 //The width of the terrain in units, after scaling
-const float TERRAIN_WIDTH = 10000;
+const float TERRAIN_WIDTH = 10000/2;
 //The amount of time between each time that we handle collisions
 const float TIME_BETWEEN_HANDLE_COLLISIONS = 0.01f;
 //The amount by which the Enderman class's step function advances the state of a Enderman
@@ -558,7 +558,6 @@ vector<Enderman*> makeEndermans(int numEndermans, MD2Model* model, Terrain* terr
 	return Endermans;
 }
 
-MD2Model* _model;
 vector<Enderman*> _Endermans;
 Quadtree* _quadtree;
 

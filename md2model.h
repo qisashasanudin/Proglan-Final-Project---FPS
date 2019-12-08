@@ -65,7 +65,6 @@ class MD2Model {
 		
 		int startFrame; //The first frame of the current animation
 		int endFrame;   //The last frame of the current animation
-		
 		MD2Model();
 	public:
 		~MD2Model();
