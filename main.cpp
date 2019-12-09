@@ -26,6 +26,7 @@
 #include "text3d.h"
 #include "terrain.h"
 #include "enderman.h"
+#include "linkedlist.h"
 //#include "bullet.h"
 
 #define ENTER 13
@@ -43,34 +44,23 @@ int is_fullscreen = 0;
 const int framerate = 1000/60;
 float sky_r=0.5843f, sky_g=0.7922f, sky_b=1.0f;		//end world : sky_r=0.1255f, sky_g=0.01961f, sky_b=0.1294f;
 float view_dist = 10000.0f;
-int terrainQuality = 2;
-int map=2, mode=1;
+int map=1, mode=1;
+int terrainQuality = 1;
+int NUM_EndermanS = 500;
 // camera's initial position
 float x=4027.06f, y=0.0f, z=1313.62f;
 float lx=0.0f, ly=0.0f, lz=0.0f;
 
 // controls
 int keystates[256];
-const char fwd = 'w';
-const char fwd_caps = 'W';
-const char back = 's';
-const char back_caps = 'S';
-const char lft = 'a';
-const char lft_caps = 'A';
-const char rgt = 'd';
-const char rgt_caps = 'D';
-const char crouch = 'c';
-const char crouch_caps = 'C';
-const char sprint = 'e';
-const char sprint_caps = 'E';
-const int jump = ' ';
+struct Node* letter = NULL;
 
 int spectator = 0;
 int pause = 0;
 int mouseSensitivity = 3;
 // angle of rotation for the camera direction
-const int xOrigin = 683;
-const int yOrigin = 384;
+float xOrigin = 683.0f;
+float yOrigin = 384.0f;
 float angle_x = 0.0f;
 float angle_y = 0.0f;
 float deltaAngle_x = 0.0f;
@@ -90,11 +80,12 @@ GLuint displayListId;
 
 //===========================================================================================================================
 
+void linkedlist_init();
 void GL_init();
 void screenResize(int w, int h);
 void toggle_fullscreen();
 GLuint LoadTexture(char* filename, int generate);
-void render3D();
+void renderScene();
 void init_lighting();
 void init_fog();
 void cleanup();
@@ -108,12 +99,13 @@ void mouseButton(int button, int state, int x, int y);
 //===========================================================================================================================
 
 int main(int argc, char **argv) {
+	linkedlist_init();
 	// init GLUT and create window	
 	glutInit(&argc, argv);
 	GL_init();
 		
 	// register callbacks
-	glutDisplayFunc(render3D);
+	glutDisplayFunc(renderScene);
 	glutReshapeFunc(screenResize);
 
 	//keyboard input
@@ -134,13 +126,43 @@ int main(int argc, char **argv) {
 
 //===========================================================================================================================
 
+void linkedlist_init(){
+	/*
+	const char fwd = 'w';
+	const char fwd_caps = 'W';
+	const char back = 's';
+	const char back_caps = 'S';
+	const char lft = 'a';
+	const char lft_caps = 'A';
+	const char rgt = 'd';
+	const char rgt_caps = 'D';
+	const char crouch = 'c';
+	const char crouch_caps = 'C';
+	const char sprint = 'e';
+	const char sprint_caps = 'E';
+	const int jump = ' ';
+	*/
+	insert(&letter, 'w');
+	insert(&letter, 'W');
+	insert(&letter, 's');
+	insert(&letter, 'S');
+	insert(&letter, 'a');
+	insert(&letter, 'A');
+	insert(&letter, 'd');
+	insert(&letter, 'D');
+	insert(&letter, 'c');
+	insert(&letter, 'C');
+	insert(&letter, 'e');
+	insert(&letter, 'E');
+	insert(&letter, ' ');
+}
+
 void GL_init(){
 	glutInitWindowPosition(100,100);
 	glutInitWindowSize(res_x,res_y);
 	glutCreateWindow(title);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
 	glutSetCursor(GLUT_CURSOR_NONE);
-	toggle_fullscreen();
 	
 	switch(map){
 		case 1:
@@ -205,6 +227,61 @@ void GL_init(){
 	glEndList();
 }
 
+void drawTerrain(Terrain* terrain){
+	Vec3f normal;								
+	//glColor3f(0.9059f, 0.9412f, 0.6784f);
+	glBindTexture(GL_TEXTURE_2D, textureData[0]);
+	glEnable(GL_TEXTURE_2D);
+	for(int z = 0; z < terrain->length()-terrainQuality; z+=terrainQuality) {
+		int a=0, b=0;
+		glBegin(GL_TRIANGLE_STRIP);
+		for(int x = 0; x < terrain->width(); x+=terrainQuality) {
+			glTexCoord2f(a, b);
+			normal = terrain->getNormal(x, z);
+			glNormal3f(normal[0], normal[1], normal[2]);
+			glVertex3f(x, terrain->getHeight(x, z), z);
+			a = !a;
+			glTexCoord2f(a, b);
+			normal = terrain->getNormal(x, z + terrainQuality);
+			glNormal3f(normal[0], normal[1], normal[2]);
+			glVertex3f(x, terrain->getHeight(x, z + terrainQuality), z + terrainQuality);
+			b = !b;
+		}
+		glEnd();
+	}
+	glDisable(GL_TEXTURE_2D);
+}
+
+void init_lighting(){
+	//ambient light
+	static float ambientColor[8][4] ={0.4, 0.4, 0.4, 1,
+									  0.2, 0.2, 0.2, 1};
+	static float lightColor[8][4] ={0.5, 0.5, 0.5, 1,
+								    0.5, 0.2, 0.2, 1};
+	static float lightPos[8][4] ={0, 10000, 0, 1,
+								  -1.0, 0.5, 0.5, 1};
+	static float lightSpec[8][4] ={1, 1, 1, 1,
+								   1, 1, 1, 1};
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientColor[0]);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor[0]);
+	glLightfv(GL_LIGHT0, GL_POSITION, lightPos[0]);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpec[0]);
+	//static float lightAmb[8][4] ={0.4, 0.4, 0.4, 1,
+	//							  0.2, 0.2, 0.2, 1};
+	//glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor[1]);
+	//glLightfv(GL_LIGHT1, GL_POSITION, lightPos[1]);
+	//glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmb[0]);
+}
+
+void init_fog(){
+	GLfloat fogColor[]={sky_r, sky_g, sky_b, 1};
+	glFogfv(GL_FOG_COLOR, fogColor);
+	glFogi(GL_FOG_MODE, GL_LINEAR); //GL_EXP, GL_EXP2
+	glFogf(GL_FOG_START,1);
+	glFogf(GL_FOG_END,view_dist);
+	//glFogf(GL_FOG_DENSITY, 0.05f);
+}
+
 void screenResize(int w, int h) {
 	if (h == 0)
 		h = 1;
@@ -249,7 +326,7 @@ GLuint LoadTexture(char* filename, int generate){
 	return ID;
 }
 
-void render3D() {
+void renderScene() {
 	float scale = TERRAIN_WIDTH / (terrainData[0]->width() - 1);
 	control(scale);
 	// Clear Color and Depth Buffers
@@ -261,9 +338,7 @@ void render3D() {
 	gluLookAt(	x, y, z,
 			x+lx, y+ly, z+lz,
 			0.0f, 1.0f, 0.0f);
-	
-	
-	
+	/*
 	glPushMatrix();
 	glColor3f(0.5,0.5,0.5);
 	glTranslatef(x, y-0.2f, z);
@@ -271,9 +346,7 @@ void render3D() {
 	glRotatef((angle_y + deltaAngle_y)*120.0/3.14, 1.0, 0.0, 0.0);
 	glutSolidCone(0.1f,1.0f,10,4);
 	glPopMatrix();
-	
-	
-	
+	*/
 	//Draw the Endermans
 	glCullFace(GL_FRONT);
 	for(unsigned int i = 0; i < _Endermans.size(); i++) {
@@ -287,61 +360,6 @@ void render3D() {
 	
     glutSwapBuffers();
     glutPostRedisplay();
-}
-
-void init_lighting(){
-	//ambient light
-	static float ambientColor[8][4] ={0.4, 0.4, 0.4, 1,
-									  0.2, 0.2, 0.2, 1};
-	static float lightColor[8][4] ={0.5, 0.5, 0.5, 1,
-								    0.5, 0.2, 0.2, 1};
-	static float lightPos[8][4] ={0, 10000, 0, 1,
-								  -1.0, 0.5, 0.5, 1};
-	static float lightSpec[8][4] ={1, 1, 1, 1,
-								   1, 1, 1, 1};
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientColor[0]);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor[0]);
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPos[0]);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpec[0]);
-	//static float lightAmb[8][4] ={0.4, 0.4, 0.4, 1,
-	//							  0.2, 0.2, 0.2, 1};
-	//glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor[1]);
-	//glLightfv(GL_LIGHT1, GL_POSITION, lightPos[1]);
-	//glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmb[0]);
-}
-
-void init_fog(){
-	GLfloat fogColor[]={sky_r, sky_g, sky_b, 1};
-	glFogfv(GL_FOG_COLOR, fogColor);
-	glFogi(GL_FOG_MODE, GL_LINEAR); //GL_EXP, GL_EXP2
-	glFogf(GL_FOG_START,1);
-	glFogf(GL_FOG_END,view_dist);
-	//glFogf(GL_FOG_DENSITY, 0.05f);
-}
-
-void drawTerrain(Terrain* terrain){
-	Vec3f normal;								
-	//glColor3f(0.9059f, 0.9412f, 0.6784f);
-	glBindTexture(GL_TEXTURE_2D, textureData[0]);
-	glEnable(GL_TEXTURE_2D);
-	for(int z = 0; z < terrain->length()-terrainQuality; z+=terrainQuality) {
-		int a=0, b=0;
-		glBegin(GL_TRIANGLE_STRIP);
-		for(int x = 0; x < terrain->width(); x+=terrainQuality) {
-			glTexCoord2f(a, b);
-			normal = terrain->getNormal(x, z);
-			glNormal3f(normal[0], normal[1], normal[2]);
-			glVertex3f(x, terrain->getHeight(x, z), z);
-			a = !a;
-			glTexCoord2f(a, b);
-			normal = terrain->getNormal(x, z + terrainQuality);
-			glNormal3f(normal[0], normal[1], normal[2]);
-			glVertex3f(x, terrain->getHeight(x, z + terrainQuality), z + terrainQuality);
-			b = !b;
-		}
-		glEnd();
-	}
-	glDisable(GL_TEXTURE_2D);
 }
 
 void cleanup() {
@@ -366,8 +384,12 @@ void key_press(unsigned char key, int xx, int yy) {
 	if(keystates['`'] || keystates['~']){
 		spectator = !spectator;
 	}
-	if(keystates['p'] || keystates['P']){
+	if(keystates[ESC]){
 		pause = !pause;
+	}
+	if(keystates['=']){
+		cleanup();
+		exit(0);
 	}
 }
 
@@ -379,42 +401,42 @@ void control(float terrainScale){
 	float height_terrain = (terrainScale * heightAt(terrainData[0], x/terrainScale, z/terrainScale)) + height_player;
 	
 	if(!pause){
-		if((!keystates[crouch] && !keystates[crouch_caps]) && (!keystates[sprint] && !keystates[sprint_caps])){
+		if((!keystates[GetNth(letter, 8)] && !keystates[GetNth(letter, 9)]) && (!keystates[GetNth(letter, 10)] && !keystates[GetNth(letter, 11)])){
 			height_player = height_player_temp;
 			speed_walk = speed_walk_temp;
-		}else if(keystates[sprint] || keystates[sprint_caps]){
+		}else if(keystates[GetNth(letter, 10)] || keystates[GetNth(letter, 11)]){
 			if(spectator){
 				speed_walk = speed_walk_temp*50.0f;
 			}else{
 				speed_walk = speed_walk_temp*2.0f;
 			}
-		}else if(keystates[crouch] || keystates[crouch_caps]){
+		}else if(keystates[GetNth(letter, 8)] || keystates[GetNth(letter, 9)]){
 			height_player = height_player_temp/2;
 			speed_walk = speed_walk_temp/2;
 		}
-		if((keystates[fwd] || keystates[fwd_caps]) && !(keystates[back] || keystates[back_caps])){
+		if((keystates[GetNth(letter, 0)] || keystates[GetNth(letter, 1)]) && !(keystates[GetNth(letter, 2)] || keystates[GetNth(letter, 3)])){
 			x += speed_walk * lx;
 			z += speed_walk * lz;
 			if(spectator){
 				y += speed_walk * ly;
 			}
 		}
-		if(!(keystates[fwd] || keystates[fwd_caps]) && (keystates[back] || keystates[back_caps])){
+		if(!(keystates[GetNth(letter, 0)] || keystates[GetNth(letter, 1)]) && (keystates[GetNth(letter, 2)] || keystates[GetNth(letter, 3)])){
 			x -= speed_walk * lx;
 			z -= speed_walk * lz;
 			if(spectator){
 				y -= speed_walk * ly;
 			}
 		}		
-		if((keystates[lft] || keystates[lft_caps]) && !(keystates[rgt] || keystates[rgt_caps])){
+		if((keystates[GetNth(letter, 4)] || keystates[GetNth(letter, 5)]) && !(keystates[GetNth(letter, 6)] || keystates[GetNth(letter, 7)])){
 			x += speed_walk * lz;
 			z -= speed_walk * lx;
 		}
-		if(!(keystates[lft] || keystates[lft_caps]) && (keystates[rgt] || keystates[rgt_caps])){
+		if(!(keystates[GetNth(letter, 4)] || keystates[GetNth(letter, 5)]) && (keystates[GetNth(letter, 6)] || keystates[GetNth(letter, 7)])){
 			x -= speed_walk * lz;
 			z += speed_walk * lx;
 		}
-		if(keystates[jump]){
+		if(keystates[GetNth(letter, 12)]){
 			if(y <= height_terrain+0.2){
 				speed = 0.4;
 			}
@@ -429,10 +451,6 @@ void control(float terrainScale){
 			time_falling = 0.03;
 			speed = 0;
 		}
-	}
-	if(keystates[ESC]){
-		cleanup();
-		exit(0);
 	}
 }
 

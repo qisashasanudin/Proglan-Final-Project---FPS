@@ -24,7 +24,6 @@
 using namespace std;
 
 const float PI = 3.1415926535f;
-const int NUM_EndermanS = 500;
 //The width of the terrain in units, after scaling
 const float TERRAIN_WIDTH = 10000;
 //The amount of time between each time that we handle collisions
