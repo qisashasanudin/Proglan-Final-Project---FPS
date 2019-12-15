@@ -18,7 +18,7 @@ Untuk dapat menggunakan Hangman Battle, Anda perlu melakukan hal berikut :
 3. Kemudian, jalankan dengan cara meng-compile main-program.cpp atau langsung meng-run main-program.exe.
 
 ## How to Play
-### Menjelajahi Aree
+### Menjelajahi Area
 ![eksplor](/ss/eksplor.png)
 ![eksplor2](/ss/eksplor2.png)
 
