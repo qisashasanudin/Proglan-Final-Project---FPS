@@ -17,39 +17,17 @@ Untuk dapat menggunakan Hangman Battle, Anda perlu melakukan hal berikut :
 3. Mendowload library OpenGL lalu di-linkan dengan compiler.
 3. Kemudian, jalankan dengan cara meng-compile main-program.cpp atau langsung meng-run main-program.exe.
 
-## Usage
-### Menu
-![Menu](/ss/menu.png)
+## How to Play
+### Menjelajahi Aree
+![eksplor](/ss/eksplor.png)
+![eksplor2](/ss/eksplor2.png)
 
-Pengguna akan masuk ke tampilan menu,.pilih play untuk memainkan game.
-### Input Player's Name
-![Input Nama](/ss/inputNama.png)
+### Menjelajahi Area dengan Mode Spectator
+![eksplorspec](/ss/eksplorspec.png)
 
-Kedua pemain memasukan nama yang dipergunakan dalam game.
-### Give a Question
-![Question](/ss/gibQues.png)
-
-Salah satu pemain akan ditunjuk sebagai 'penanya' secara random kemudian memberikan kata untuk ditebak kepada lawan.
-### Guess the Word
-![Guess](/ss/gibAns.png)
-![Guess](/ss/gibAns2.png)
-
-Pemain penjawab diharuskan untuk menjawab. Tebakan dapat dilakukan dengan menginput satu huruf atau lebih.
-### Swap the Role
-![Swap](/ss/gibQues2.png)
-
-Jika penjawab berhasil menebak kata, posisi para pemain akan di swap. Penanya akan menjadi penjawab dan penjawab akan menjadi penanya.
-### Guess the Word Until Win
-![Lose](/ss/loseAns2.png)
-
-Gambar Hangman akan terbentuk jika penjawab salah menebak kata, pemain hanya memiliki toleransi salah menebak maksimal lima kali.
-## We Got the Winner
-![Winner](/ss/lose.png)
-
-Pemenang akan didapatkan jika penjawab gagal menebak kata yang diberikan dan telah melewati batas maksimal lima kali salah menebak.
-## Exit
-
-Ketika game telah selesai, tampilan akan dialihkan ke menu. Pilih exit untuk keluar dari aplikasi.
+Pemain dapat mengklik tombol |~| pada keyboard untuk masuk ke mode ini. Untuk kembali ke mode biasa pemain dapat mengklik tombol yang sama.
+### Exit
+Sebelum keluar dari program pemain dapat mempause game dengan mengklik tombol |Esc|. Untuk keluar game, pemain dapat menggunakan kombinasi Alt+F4 (force close) namun dianjurkan untuk mengklik tombol |=| terlebih dahulu. Hal ini ditujukan untuk mengclear memory yang terpakai ketika program dijalankan.
 
 ## License
 
