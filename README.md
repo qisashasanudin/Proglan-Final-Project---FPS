@@ -13,7 +13,7 @@ System Requirements: Windows
 <br>
 Untuk dapat menggunakan Hangman Battle, Anda perlu melakukan hal berikut :
 1. Mendownload source-code nya terlebih dahulu dengan cara menekan tombol download disamping.
-2. Buka source-code menggunakan C compiler. Jika Anda tidak memilikinya, [download disini](https://sourceforge.net/projects/orwelldevcpp/files/latest/download).
+2. Buka source-code menggunakan C compiler. Jika Anda tidak memilikinya, [download disini](https://sourceforge.net/projects/orwelldevcpp/).
 3. Mendowload library OpenGL (freeglut) lalu di-linkan dengan compiler [download disini](https://www.transmissionzero.co.uk/software/freeglut-devel/).
 3. Kemudian, jalankan dengan cara meng-compile main-program.cpp atau langsung meng-run main-program.exe.
 
