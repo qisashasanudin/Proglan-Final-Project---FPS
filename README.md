@@ -18,7 +18,6 @@ Untuk dapat meng-compile program ini, Anda perlu melakukan hal berikut :
 3. Kemudian, jalankan dengan cara meng-compile main-program.cpp atau langsung meng-run main-program.exe.
 
 ## How to Play
-<br>
 Maju            : W
 Mundur          : S
 Jalan ke kiri   : A
