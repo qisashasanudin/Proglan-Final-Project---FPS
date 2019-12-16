@@ -18,13 +18,13 @@ Untuk dapat meng-compile program ini, Anda perlu melakukan hal berikut :
 3. Kemudian, jalankan dengan cara meng-compile main-program.cpp atau langsung meng-run main-program.exe.
 
 ## How to Play
-Maju            : W
-Mundur          : S
-Jalan ke kiri   : A
-Jalan ke kanan  : D
-Lompat          : Spasi
-Jongkok         : C
-Lari / sprint   : W + E
+- Maju            : W
+- Mundur          : S
+- Jalan ke kiri   : A
+- Jalan ke kanan  : D
+- Lompat          : Spasi
+- Jongkok         : C
+- Lari / sprint   : W + E
 
 ### Menjelajahi Area
 ![eksplor](/ss/eksplor.png)
