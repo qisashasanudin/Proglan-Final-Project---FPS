@@ -6,12 +6,12 @@
 * [License](#license)
 
 ## Description
-Merupakan program yang berupa game Open World 3D. Pemain dapat bebas menjelajahi area yang telah disiapkan baik itu dengan mode biasa atau mode spectator. Selain itu, pemain juga akan ditemani eksistensi lain dalam game ini. Program game ini memakain open source OpenGL (freeglut) dalam bahasa C dengan compiler C++. Bentuk kontur tanah dan tekstur area dapat diatur oleh pengguna dengan memodifikasi program. 
+Merupakan program yang berupa game Open World 3D. Pemain dapat bebas menjelajahi area yang telah disiapkan baik itu dengan mode biasa atau mode spectator. Selain itu, pemain juga akan ditemani eksistensi lain dalam game ini. Program game ini memakai library open source OpenGL (freeglut) dalam bahasa C dengan compiler C++. Bentuk kontur tanah dan tekstur area dapat diatur oleh pengguna dengan memodifikasi program. 
 
 ## Installation
 System Requirements: Windows
 <br>
-Untuk dapat menggunakan Hangman Battle, Anda perlu melakukan hal berikut :
+Untuk dapat meng-compile program ini, Anda perlu melakukan hal berikut :
 1. Mendownload source-code nya terlebih dahulu dengan cara menekan tombol download disamping.
 2. Buka source-code menggunakan C compiler. Jika Anda tidak memilikinya, [download disini](https://sourceforge.net/projects/orwelldevcpp/).
 3. Mendowload library OpenGL (freeglut) lalu di-linkan dengan compiler [download disini](https://www.transmissionzero.co.uk/software/freeglut-devel/).
